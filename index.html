@@ -1046,6 +1046,8 @@ function showFailedFeedback() {
      let gridRect = null;
      let cellWidth = 0;
      let cellHeight = 0;
+     let lastCursorPos = { x: 0, y: 0 };
+     const smoothingFactor = 0.3; // Mais perto de 0 = mais suave, mais lento. Mais perto de 1 = mais rápido, menos suave.
  
      function isInsideMatrix(x, y) {
          if (!gridRect) return false;
@@ -1066,29 +1068,34 @@ function showFailedFeedback() {
 
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
-       // console.log(hands); // DEBUG: Descomente para ver os dados da mão
 
-       if (hands?.landmarks?.[0]?.[8] && hands?.landmarks?.[0]?.[7] && hands?.landmarks?.[0]?.[6]) {
-           // Média dos 3 pontos do dedo indicador para estabilização
-           const p8 = hands.landmarks[0][8]; // Ponta
-           const p7 = hands.landmarks[0][7];
-           const p6 = hands.landmarks[0][6];
-           const avgX = (p8.x + p7.x + p6.x) / 3;
-           const avgY = (p8.y + p7.y + p6.y) / 3;
+       if (hands?.landmarks?.[0]) {
+           // 1. Calcula o centro da palma para estabilidade
+           const landmarks = hands.landmarks[0];
+           const p0 = landmarks[0];  // Pulso
+           const p5 = landmarks[5];  // Base do indicador
+           const p9 = landmarks[9];  // Base do meio
+           const p17 = landmarks[17]; // Base do mindinho
+           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+           const targetX = window.innerWidth * (1 - palmCenterX);
+           const targetY = window.innerHeight * palmCenterY;
 
-           const x = window.innerWidth * (1 - avgX);
-           const y = window.innerHeight * avgY;
+           // 2. Aplica suavização de movimento
+           const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
+           const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
+           lastCursorPos = { x: smoothedX, y: smoothedY };
 
-           cursorEl.style.left = `${x}px`;
-           cursorEl.style.top = `${y}px`;
+           cursorEl.style.left = `${smoothedX}px`;
+           cursorEl.style.top = `${smoothedY}px`;
            cursorEl.style.display = 'block';
            
-           // Lógica de hover e clique (simplificada)
-           const isVisible = isInsideMatrix(x, y);
+           // 3. Lógica de hover com posição suavizada
+           const isVisible = isInsideMatrix(smoothedX, smoothedY);
            let currentElement = null;
            if(isVisible) {
-               const relativeX = x - gridRect.left;
-               const relativeY = y - gridRect.top;
+               const relativeX = smoothedX - gridRect.left;
+               const relativeY = smoothedY - gridRect.top;
                const col = Math.floor(relativeX / cellWidth);
                const row = Math.floor(relativeY / cellHeight);
                const gridEl = document.getElementById('grid');
@@ -1105,12 +1112,11 @@ function showFailedFeedback() {
            }
            lastHoveredElement = currentElement;
 
-           // Clique
+           // 4. Clique com Debounce de 500ms
            if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
                onPick(currentElement);
                pinchCooldown = true;
-           } else if (hands.pinchState?.[0]?.[0] === 'released') {
-               pinchCooldown = false;
+               setTimeout(() => { pinchCooldown = false; }, 500); // Cooldown de 500ms
            }
 
        } else {
