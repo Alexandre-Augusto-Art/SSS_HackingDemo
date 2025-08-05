@@ -1042,22 +1042,25 @@ function showFailedFeedback() {
 
     // Plugin que dispara clique usando estado pinchState do modelo
     let pinchCooldown = false;
-    handsfree.use('pinchClick', (data) => {
-      if(pinchCooldown) return;
-      const hands = data.hands;
+    handsfree.use('pinchClick', ({hands}) => {
       if(!hands || !hands.pinchState || !hands.pinchState[0]) return;
-      const pinchIndexThumb = hands.pinchState[0][0]; // 0 = polegar + indicador
-      if(pinchIndexThumb === 'start'){
+      const fingerStates = hands.pinchState[0]; // primeira mão
+      // Verifica se algum dedo acabou de iniciar a pinça
+      const anyStart = fingerStates.some(s=>s==='start');
+      const allReleased = fingerStates.every(s=>s==='released');
+
+      if(anyStart && !pinchCooldown){
         if(!handsfree.plugins || !handsfree.plugins.cursor || !handsfree.plugins.cursor.cursor) return;
         const {x,y}=handsfree.plugins.cursor.cursor;
         if(isInsideMatrix(x,y)){
           dispatchMouseEvent('mousedown',x,y);
           dispatchMouseEvent('mouseup',x,y);
           dispatchMouseEvent('click',x,y);
-          // Evita múltiplos cliques enquanto estiver pinçado
-          pinchCooldown = true;
-          setTimeout(()=>{pinchCooldown=false;},300); // 300ms debounce
         }
+        pinchCooldown=true;
+      }else if(allReleased){
+        // Reseta o cooldown quando soltar todos
+        pinchCooldown=false;
       }
     });
 
