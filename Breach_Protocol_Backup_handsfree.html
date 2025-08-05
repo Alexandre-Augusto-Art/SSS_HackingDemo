@@ -1009,9 +1009,9 @@ function showFailedFeedback() {
          position: fixed;
          width: 24px;
          height: 24px;
-         border: 2px solid #00ffff; /* Cor alterada para ciano */
+         border: 2px solid #eaff00;
          border-radius: 50%;
-         background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
+         background: rgba(234, 255, 0, 0.4);
          pointer-events: none;
          z-index: 10000;
          mix-blend-mode: difference;
@@ -1066,18 +1066,12 @@ function showFailedFeedback() {
 
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
-       // console.log(hands); // DEBUG: Descomente para ver os dados da mão
+       console.log(hands); // DEBUG: Mostra todos os dados da mão no console
 
-       if (hands?.landmarks?.[0]?.[8] && hands?.landmarks?.[0]?.[7] && hands?.landmarks?.[0]?.[6]) {
-           // Média dos 3 pontos do dedo indicador para estabilização
-           const p8 = hands.landmarks[0][8]; // Ponta
-           const p7 = hands.landmarks[0][7];
-           const p6 = hands.landmarks[0][6];
-           const avgX = (p8.x + p7.x + p6.x) / 3;
-           const avgY = (p8.y + p7.y + p6.y) / 3;
-
-           const x = window.innerWidth * (1 - avgX);
-           const y = window.innerHeight * avgY;
+       if (hands?.landmarks?.[0]?.[8]) {
+           const fingerTip = hands.landmarks[0][8];
+           const x = window.innerWidth * (1 - fingerTip.x);
+           const y = window.innerHeight * fingerTip.y;
 
            cursorEl.style.left = `${x}px`;
            cursorEl.style.top = `${y}px`;
