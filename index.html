@@ -1064,44 +1064,33 @@ function showFailedFeedback() {
         const cursorEl = document.getElementById('handsfree-cursor');
         const dbgXYEl = document.getElementById('dbgXY');
         const dbgPinchEl = document.getElementById('dbgPinch');
-
-        // Guarda de segurança: só executa se tivermos todos os dados necessários
-        if (!hands?.landmarks?.[0] || !hands?.pinchState?.[0]) {
+ 
+        // Guarda de segurança: só executa se o ponteiro e o estado da pinça existirem
+        if (typeof hands?.pointer?.x !== 'number' || typeof hands?.pointer?.y !== 'number' || !hands?.pinchState?.[0]) {
             if (cursorEl) cursorEl.style.display = 'none';
             return;
         }
 
-        const landmarks = hands.landmarks[0];
-        const palmCenter = landmarks[0];
-        const fingerTip = landmarks[8];
+        const { x, y } = hands.pointer;
 
-        // Calcular vetor e aplicar escala
-        const vecX = fingerTip.x - palmCenter.x;
-        const vecY = fingerTip.y - palmCenter.y;
-        const scale = 8 * window.innerWidth / (gridRect?.width || window.innerWidth);
+        // 1. Atualiza a posição do cursor amarelo
+        cursorEl.style.left = `${x}px`;
+        cursorEl.style.top = `${y}px`;
 
-        // Mapear vetor para a grade
-        const gridCenterX = gridRect ? gridRect.left + gridRect.width / 2 : window.innerWidth / 2;
-        const gridCenterY = gridRect ? gridRect.top + gridRect.height / 2 : window.innerHeight / 2;
-        let cursorX = gridCenterX + vecX * scale;
-        let cursorY = gridCenterY + vecY * scale * 1.5;
-
-        cursorEl.style.left = `${cursorX}px`;
-        cursorEl.style.top = `${cursorY}px`;
+        // 2. Lógica de Hover e Visibilidade
+        const isVisible = isInsideMatrix(x, y);
+        cursorEl.style.display = isVisible ? 'block' : 'none';
 
         let currentElement = null;
-        if (isInsideMatrix(cursorX, cursorY) && gridRect && cellWidth > 0) {
-            cursorEl.style.display = 'block';
-            const relativeX = cursorX - gridRect.left;
-            const relativeY = cursorY - gridRect.top;
+        if (isVisible && gridRect && cellWidth > 0) {
+            const relativeX = x - gridRect.left;
+            const relativeY = y - gridRect.top;
             const col = Math.floor(relativeX / cellWidth);
             const row = Math.floor(relativeY / cellHeight);
             const gridEl = document.getElementById('grid');
             if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
                 currentElement = gridEl.rows[row].cells[col];
             }
-        } else {
-            cursorEl.style.display = 'none';
         }
 
         if (lastHoveredElement && lastHoveredElement !== currentElement) {
@@ -1112,7 +1101,7 @@ function showFailedFeedback() {
         }
         lastHoveredElement = currentElement;
 
-        // Gesto de clique (pinça)
+        // 3. Gesto de clique (pinça)
         const isPinchingNow = hands.pinchState[0][0] === 'start';
         if (isPinchingNow && !pinchCooldown && currentElement) {
             onPick(currentElement);
@@ -1121,12 +1110,12 @@ function showFailedFeedback() {
             pinchCooldown = false;
         }
         
-        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(cursorX)} Y: ${Math.round(cursorY)}`;
+        // 4. Atualiza o painel de debug
+        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(x)} Y: ${Math.round(y)}`;
         if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinchingNow ? 'DOWN' : 'UP'}`;
-
-    });
- 
-    // Desativa plugin de scroll para evitar a página subir/descer durante pinch
+      });
+  
+      // Desativa plugin de scroll para evitar a página subir/descer durante pinch
     if(handsfree.plugin.pinchScroll){handsfree.plugin.pinchScroll.disable()}
     if(handsfree.plugin.faceScroll){handsfree.plugin.faceScroll.disable()}
     handsfree.on('deviceError', err => {
