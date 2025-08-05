@@ -1015,22 +1015,42 @@ function showFailedFeedback() {
     }
 
     // === Painel de debug =================================================
+    // 1. Criar o contêiner fora da bp-hacks-panel
     const hacksPanel = document.querySelector('.bp-hacks-panel');
-    const dbg = document.createElement('div');
-    dbg.id = 'hfDebug';
-    dbg.style.background = '#181c22';
-    dbg.style.color = '#eaff00';
-    dbg.style.fontFamily = "'ChakraPetch', monospace";
-    dbg.style.fontSize = '0.9em';
-    dbg.style.padding = '8px 16px';
-    dbg.style.margin = '6px 24px 12px 24px';
-    dbg.style.border = '2px solid #eaff00';
-    dbg.style.borderRadius = '6px';
-    dbg.textContent = 'X: --  Y: --  Pinch: --';
-    hacksPanel.appendChild(dbg);
+    const dbgBox = document.createElement('div');
+    dbgBox.id = 'hfDebug';
+    dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
+    Object.assign(dbgBox.style, {
+      background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
+      fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px',
+      border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
+    });
+    // Insere logo DEPOIS do painel de hacks
+    hacksPanel.insertAdjacentElement('afterend', dbgBox);
 
-    // Variável global para indicar se pinça está ativa
+    // 2. Variável global p/ estado da pinça
     let pinchActive = false;
+
+    // 3. Atualizador central (executa a cada frame)
+    handsfree.use('debugUpdater', () => {
+      const curPlugin = handsfree.plugins.cursor;
+      if (curPlugin && curPlugin.cursor) {
+        const { x, y } = curPlugin.cursor;
+        // Atualiza XY
+        document.getElementById('dbgXY').textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}`;
+      }
+      // Atualiza pinch
+      document.getElementById('dbgPinch').textContent = `Pinch: ${pinchActive ? 'DOWN' : 'UP'}`;
+    });
+
+    // 4. Detectar pinça pelo estado do modelo (clique ainda em teste)
+    handsfree.use('detectPinch', ({ hands }) => {
+      if (!hands?.pinchState?.[0]) return;
+      const started = hands.pinchState[0].some(s => s === 'start');
+      const released = hands.pinchState[0].every(s => s === 'released');
+      if (started) pinchActive = true;
+      if (released) pinchActive = false;
+    });
 
     // Oculta/mostra cursor conforme posição e atualiza painel
     handsfree.use('matrixLimiter', () => {
@@ -1044,7 +1064,7 @@ function showFailedFeedback() {
           cursorEl.style.display = isInsideMatrix(x,y)?'block':'none';
         }
         // Atualiza painel debug
-        dbg.textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}  Pinch: ${pinchActive ? 'DOWN':'UP'}`;
+        // dbg.textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}  Pinch: ${pinchActive ? 'DOWN':'UP'}`; // This line is now handled by debugUpdater
       }
     });
 
