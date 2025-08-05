@@ -5,6 +5,7 @@
   <title>Breach Protocol – Mini‑game</title>
   <link rel="stylesheet" href="https://unpkg.com/augmented-ui@2/augmented-ui.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/handsfree@8.5.1/build/lib/assets/handsfree.css">
   <style>
     /* Fonte carregada via Google Fonts no <head>; @font-face local removido */
     body {
@@ -996,6 +997,14 @@ function showFailedFeedback() {
     handsfree.enablePlugins('browser')
     handsfree.start()
     document.body.style.cursor = 'none'
+    // Esconde o vídeo da webcam que o Handsfree insere
+    const styleHF = document.createElement('style');
+    styleHF.textContent = `video.handsfree-video{display:none!important;}#handsfree-cursor{width:24px;height:24px;border:2px solid #eaff00;border-radius:50%;background:rgba(234,255,0,.4);position:fixed;pointer-events:none;transform:translate(-50%,-50%);z-index:10000;mix-blend-mode:difference}`;
+    document.head.appendChild(styleHF);
+
+    // Desativa plugin de scroll para evitar a página subir/descer durante pinch
+    if(handsfree.plugin.pinchScroll){handsfree.plugin.pinchScroll.disable()}
+    if(handsfree.plugin.faceScroll){handsfree.plugin.faceScroll.disable()}
     handsfree.on('deviceError', err => {
       alert('Não foi possível acessar a câmera. Verifique permissões de site e conexão HTTPS.')
       console.error(err)
