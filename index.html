@@ -1171,6 +1171,7 @@ function showFailedFeedback() {
        } else {
          handsfree.pause(); // Alterado de stopMedia() para pause()
          textEl.textContent = 'Handsfree OFF';
+         document.getElementById('handsfree-cursor').style.display = 'none'; // Esconde o cursor
        }
      });
  
