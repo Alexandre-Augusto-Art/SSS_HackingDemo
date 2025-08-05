@@ -1107,97 +1107,74 @@ function showFailedFeedback() {
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
 
-       if (hands?.landmarks) {
-           // Prioriza a mão direita, se disponível
-           let handIndex = -1;
-           if (hands.handedness) {
-               const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
-               if (rightHandIndex !== -1) {
-                   handIndex = rightHandIndex;
-               } else if (hands.handedness.length > 0) {
-                   handIndex = 0; // Fallback para a primeira mão disponível (esquerda)
-               }
-           }
-           
-           if (handIndex === -1 || !hands.landmarks[handIndex]) {
-               if(cursorEl) cursorEl.style.display = 'none';
-               return;
-           }
-
-           const landmarks = hands.landmarks[handIndex];
+       if (hands?.landmarks?.[0]) {
+           const landmarks = hands.landmarks[0];
            // Guarda de segurança para garantir que todos os pontos da palma existam
            if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
                return; // Pula este quadro se os dados estiverem incompletos
            }
- 
-           let targetX, targetY;
 
-           if (gameEnded) {
-               // Modo Direto Pós-Jogo: Mapeia a ponta do dedo para a tela inteira
-               const fingerTip = landmarks[8];
-               if (fingerTip) {
-                   targetX = window.innerWidth * (1 - fingerTip.x);
-                   targetY = window.innerHeight * fingerTip.y;
-               }
-           } else {
-               // Modo Preciso Durante o Jogo: Ancorado na palma
-               const p0 = landmarks[0];  // Pulso
-               const p5 = landmarks[5];  // Base do indicador
-               const p9 = landmarks[9];  // Base do meio
-               const p17 = landmarks[17]; // Base do mindinho
-               const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-               const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-               targetX = window.innerWidth * (1 - palmCenterX);
-               targetY = window.innerHeight * palmCenterY;
-           }
+           // 1. Calcula o centro da palma para estabilidade
+           const p0 = landmarks[0];  // Pulso
+           const p5 = landmarks[5];  // Base do indicador
+           const p9 = landmarks[9];  // Base do meio
+           const p17 = landmarks[17]; // Base do mindinho
+           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+           const targetX = window.innerWidth * (1 - palmCenterX);
+           const targetY = window.innerHeight * palmCenterY;
 
            // 2. Aplica suavização de movimento
-           if (targetX !== undefined && targetY !== undefined) {
-               const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
-               const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
-               lastCursorPos = { x: smoothedX, y: smoothedY };
-    
-               cursorEl.style.left = `${smoothedX}px`;
-               cursorEl.style.top = `${smoothedY}px`;
-               cursorEl.style.display = 'block';
-               
-               // 3. Lógica de hover com posição suavizada
-               const isVisible = isInsideMatrix(smoothedX, smoothedY) || gameEnded;
-               let currentElement = null;
-    
-               if(isVisible) {
-                   if (gameEnded) {
-                       currentElement = document.elementFromPoint(smoothedX, smoothedY);
-                   } else if (gridRect && cellWidth > 0) { // Garante que a grade foi medida
-                       const relativeX = smoothedX - gridRect.left;
-                       const relativeY = smoothedY - gridRect.top;
-                       const col = Math.floor(relativeX / cellWidth);
-                       const row = Math.floor(relativeY / cellHeight);
-                       const gridEl = document.getElementById('grid');
-                       if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                           currentElement = gridEl.rows[row].cells[col];
-                       }
+           const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
+           const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
+           lastCursorPos = { x: smoothedX, y: smoothedY };
+
+           cursorEl.style.left = `${smoothedX}px`;
+           cursorEl.style.top = `${smoothedY}px`;
+           cursorEl.style.display = 'block';
+           
+           // 3. Lógica de hover com posição suavizada
+           const isVisible = isInsideMatrix(smoothedX, smoothedY) || gameEnded;
+           let currentElement = null;
+
+           if(isVisible) {
+               if (gameEnded) {
+                   // Após o jogo, o cursor fica ativo em toda a tela
+                   cursorEl.style.display = 'block';
+                   currentElement = document.elementFromPoint(smoothedX, smoothedY);
+               } else {
+                   // Durante o jogo, o cursor só é visível na matriz
+                   cursorEl.style.display = isInsideMatrix(smoothedX, smoothedY) ? 'block' : 'none';
+                   const relativeX = smoothedX - gridRect.left;
+                   const relativeY = smoothedY - gridRect.top;
+                   const col = Math.floor(relativeX / cellWidth);
+                   const row = Math.floor(relativeY / cellHeight);
+                   const gridEl = document.getElementById('grid');
+                   if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                       currentElement = gridEl.rows[row].cells[col];
                    }
                }
-    
-               if (lastHoveredElement && lastHoveredElement !== currentElement) {
-                   lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+           } else {
+               cursorEl.style.display = 'none';
+           }
+
+           if (lastHoveredElement && lastHoveredElement !== currentElement) {
+               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+           }
+           if (currentElement && currentElement !== lastHoveredElement) {
+               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+           }
+           lastHoveredElement = currentElement;
+
+           // 4. Clique com Debounce de 750ms
+           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
+               if (!gameEnded && currentElement.classList.contains('cell')) {
+                   onPick(currentElement);
+               } else if (gameEnded && (currentElement.classList.contains('exit-btn-success') || currentElement.classList.contains('exit-btn-fail'))) {
+                   currentElement.click();
                }
-               if (currentElement && currentElement !== lastHoveredElement) {
-                   currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-               }
-               lastHoveredElement = currentElement;
-    
-               // 4. Clique com Debounce de 750ms
-               if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
-                   if (!gameEnded && currentElement.classList.contains('cell')) {
-                       onPick(currentElement);
-                   } else if (gameEnded && (currentElement.classList.contains('exit-btn-success') || currentElement.classList.contains('exit-btn-fail'))) {
-                       currentElement.click();
-                   }
-                   pinchCooldown = true;
-                   setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown de 750ms
-               }
+               pinchCooldown = true;
+               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown de 750ms
            }
 
        } else {
