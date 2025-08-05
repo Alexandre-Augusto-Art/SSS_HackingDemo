@@ -1033,8 +1033,9 @@ function showFailedFeedback() {
 
     // 3. Atualizador central (executa a cada frame)
     handsfree.use('debugUpdater', () => {
+      if(!handsfree.plugins || !handsfree.plugins.cursor) return;
       const curPlugin = handsfree.plugins.cursor;
-      if (curPlugin && curPlugin.cursor) {
+      if (curPlugin.cursor) {
         const { x, y } = curPlugin.cursor;
         // Atualiza XY
         document.getElementById('dbgXY').textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}`;
