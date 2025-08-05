@@ -1032,6 +1032,7 @@ function showFailedFeedback() {
     let vCursor = { x: 0, y: 0, isVisible: false };
     let isPinching = false;
     let pinchCooldown = false;
+    let lastHoveredElement = null;
 
     handsfree.use('masterController', ({ hands }) => {
         const cursorEl = document.getElementById('handsfree-cursor');
@@ -1049,6 +1050,18 @@ function showFailedFeedback() {
                 cursorEl.style.left = `${vCursor.x}px`;
                 cursorEl.style.top = `${vCursor.y}px`;
                 cursorEl.style.display = vCursor.isVisible ? 'block' : 'none';
+            }
+
+            // Simula eventos de hover para mostrar dicas
+            const currentElement = document.elementFromPoint(vCursor.x, vCursor.y);
+            if (currentElement !== lastHoveredElement) {
+                if (lastHoveredElement) {
+                    lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                }
+                if (currentElement && currentElement.classList.contains('cell')) {
+                    currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                }
+                lastHoveredElement = currentElement;
             }
         } else {
             vCursor.isVisible = false;
