@@ -1014,7 +1014,25 @@ function showFailedFeedback() {
       return x>=rect.left && x<=rect.right && y>=rect.top && y<=rect.bottom;
     }
 
-    // Oculta/mostra cursor conforme posição
+    // === Painel de debug =================================================
+    const hacksPanel = document.querySelector('.bp-hacks-panel');
+    const dbg = document.createElement('div');
+    dbg.id = 'hfDebug';
+    dbg.style.background = '#181c22';
+    dbg.style.color = '#eaff00';
+    dbg.style.fontFamily = "'ChakraPetch', monospace";
+    dbg.style.fontSize = '0.9em';
+    dbg.style.padding = '8px 16px';
+    dbg.style.margin = '6px 24px 12px 24px';
+    dbg.style.border = '2px solid #eaff00';
+    dbg.style.borderRadius = '6px';
+    dbg.textContent = 'X: --  Y: --  Pinch: --';
+    hacksPanel.appendChild(dbg);
+
+    // Variável global para indicar se pinça está ativa
+    let pinchActive = false;
+
+    // Oculta/mostra cursor conforme posição e atualiza painel
     handsfree.use('matrixLimiter', () => {
       if(!handsfree.plugins || !handsfree.plugins.cursor) return;
       const cur = handsfree.plugins.cursor;
@@ -1025,6 +1043,8 @@ function showFailedFeedback() {
         if(cursorEl){
           cursorEl.style.display = isInsideMatrix(x,y)?'block':'none';
         }
+        // Atualiza painel debug
+        dbg.textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}  Pinch: ${pinchActive ? 'DOWN':'UP'}`;
       }
     });
 
@@ -1058,9 +1078,11 @@ function showFailedFeedback() {
           dispatchMouseEvent('click',x,y);
         }
         pinchCooldown=true;
+        pinchActive=true;
       }else if(allReleased){
         // Reseta o cooldown quando soltar todos
         pinchCooldown=false;
+        pinchActive=false;
       }
     });
 
