@@ -1016,8 +1016,9 @@ function showFailedFeedback() {
 
     // Oculta/mostra cursor conforme posição
     handsfree.use('matrixLimiter', () => {
-      if(!handsfree.plugins.cursor || !handsfree.plugins.cursor.cursor) return;
-      const {x, y} = handsfree.plugins.cursor.cursor;
+      const cur = handsfree.plugins.cursor;
+      if(!cur || !cur.cursor || typeof cur.cursor.x!=='number') return;
+      const {x, y} = cur.cursor;
       if(typeof x==='number'&&typeof y==='number'){
         const cursorEl = document.getElementById('handsfree-cursor');
         if(cursorEl){
