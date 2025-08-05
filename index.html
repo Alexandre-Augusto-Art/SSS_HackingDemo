@@ -1166,10 +1166,10 @@ function showFailedFeedback() {
        const textEl = toggleBtn.querySelector('.toggle-text');
 
        if (isHandsfreeEnabled) {
-         handsfree.start();
+         handsfree.unpause(); // Alterado de start() para unpause()
          textEl.textContent = 'Handsfree ON';
        } else {
-         handsfree.stopMedia();
+         handsfree.pause(); // Alterado de stopMedia() para pause()
          textEl.textContent = 'Handsfree OFF';
        }
      });
