@@ -1027,18 +1027,18 @@ function showFailedFeedback() {
      document.body.appendChild(cursorEl);
  
      // 3. Criação do painel de debug
-     const hackList = document.getElementById('hackList');
+     const hacksPanel = document.querySelector('.bp-hacks-panel');
      const dbgBox = document.createElement('div');
      dbgBox.id = 'hfDebug';
      dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
      Object.assign(dbgBox.style, {
        background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
-       fontSize:'0.9em',padding:'10px 16px',margin:'12px 0',
+       fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px', // Margem ajustada para alinhar com o painel de hacks
        border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
      });
-     hackList.appendChild(dbgBox);
+     hacksPanel.insertAdjacentElement('afterend', dbgBox);
  
-     // 3. Controlador Mestre (Versão final usando hands.pointer)
+     // --- LÓGICA DE CONTROLE UNIFICADA E FINAL ---
      handsfree.use('precisionController', ({ hands }) => {
          const cursorEl = document.getElementById('handsfree-cursor');
          const dbgXYEl = document.getElementById('dbgXY');
