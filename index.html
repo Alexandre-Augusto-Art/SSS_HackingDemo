@@ -1029,13 +1029,13 @@ function showFailedFeedback() {
 
     // Clique por pinça somente dentro da matrix
     handsfree.on('gesture', ({gesture})=>{
-      if(gesture.name==='pinch' && gesture.state==='start'){
-        const {x,y}=handsfree.plugins.cursor.cursor;
-        if(isInsideMatrix(x,y)){
-          dispatchMouseEvent('mousedown',x,y);
-          dispatchMouseEvent('mouseup',x,y);
-          dispatchMouseEvent('click',x,y);
-        }
+      if(gesture.name!=='pinch' || gesture.state!=='start') return;
+      if(!handsfree.plugins.cursor || !handsfree.plugins.cursor.cursor) return;
+      const {x,y}=handsfree.plugins.cursor.cursor;
+      if(isInsideMatrix(x,y)){
+        dispatchMouseEvent('mousedown',x,y);
+        dispatchMouseEvent('mouseup',x,y);
+        dispatchMouseEvent('click',x,y);
       }
     });
 
