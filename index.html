@@ -992,5 +992,19 @@ function showFailedFeedback() {
   $('failMsg').classList.remove('hide');
 }
 </script>
+<!-- Handsfree.js – Hand-tracking cursor integration -->
+<script defer src="https://unpkg.com/handsfree@8.5.0/build/handsfree.js"></script>
+<script>
+  window.addEventListener('DOMContentLoaded', () => {
+    const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
+    handsfree.enablePlugins('browser')
+    handsfree.start()
+    document.body.style.cursor = 'none'
+    handsfree.on('deviceError', err => {
+      alert('Não foi possível acessar a câmera. Verifique permissões de site e conexão HTTPS.')
+      console.error(err)
+    })
+  })
+</script>
 </body>
 </html>
