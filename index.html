@@ -1039,9 +1039,9 @@ function showFailedFeedback() {
         const dbgPinchEl = document.getElementById('dbgPinch');
 
         // 1. ATUALIZA POSIÇÃO DO CURSOR (usando dados brutos do modelo)
-        if (hands?.landmarks?.[0]) {
-            const fingerTip = hands.landmarks[0][8]; // Ponta do dedo indicador
-            vCursor.x = window.innerWidth * fingerTip.x;
+        if (hands?.landmarks?.[0]?.[8]) { // Verifica se a ponta do dedo existe
+            const fingerTip = hands.landmarks[0][8];
+            vCursor.x = window.innerWidth * (1 - fingerTip.x);
             vCursor.y = window.innerHeight * fingerTip.y;
             vCursor.isVisible = isInsideMatrix(vCursor.x, vCursor.y);
 
