@@ -996,11 +996,37 @@ function showFailedFeedback() {
     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
     handsfree.enablePlugins('browser')
     handsfree.start()
-    // Esconde o vídeo da webcam que o Handsfree insere
-    const styleHF = document.createElement('style');
-    styleHF.textContent = `video.handsfree-video{display:none!important;}#handsfree-cursor{width:24px;height:24px;border:2px solid #eaff00;border-radius:50%;background:rgba(234,255,0,.4);position:fixed;pointer-events:none;transform:translate(-50%,-50%);z-index:10000;mix-blend-mode:difference} body{cursor:auto!important;}`;
-    document.head.appendChild(styleHF);
-
+ 
+     // --- Criação de Elementos da Interface (Cursor, Debug) ---
+ 
+     // 1. Estilos para cursor e para ocultar vídeo
+     const styleEl = document.createElement('style');
+     styleEl.textContent = `
+       video.handsfree-video { display: none !important; }
+       #handsfree-cursor {
+         position: fixed;
+         width: 24px;
+         height: 24px;
+         border: 2px solid #eaff00;
+         border-radius: 50%;
+         background: rgba(234, 255, 0, 0.4);
+         pointer-events: none;
+         /* O transform é aplicado via JS, não mais aqui, para evitar conflito com left/top */
+         z-index: 10000;
+         mix-blend-mode: difference;
+         display: none; /* Inicia oculto */
+       }
+       body { cursor: auto !important; }
+     `;
+     document.head.appendChild(styleEl);
+ 
+     // 2. Cria e anexa o elemento do cursor que estava faltando
+     const cursorEl = document.createElement('div');
+     cursorEl.id = 'handsfree-cursor';
+     document.body.appendChild(cursorEl);
+ 
+     // 3. Criação do painel de debug
+ 
     // Utilidade para disparar eventos de mouse
     function dispatchMouseEvent(type, x, y){
       const evt = new MouseEvent(type, {clientX:x, clientY:y, bubbles:true});
