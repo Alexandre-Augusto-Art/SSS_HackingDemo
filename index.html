@@ -642,6 +642,33 @@
       color: #0b2e1a;
       box-shadow: 0 0 12px #00ff99aa;
     }
+
+    /* Botão de Saída em caso de falha (vermelho) */
+    .exit-btn-fail {
+      background: transparent;
+      color: #f00;
+      font-family: 'ChakraPetch', monospace;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 16px 48px;
+      border: 2px solid #f00;
+      cursor: pointer;
+      position: fixed;
+      right: 48px;
+      bottom: 48px;
+      z-index: 200;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      --aug-border-all: 2px;
+      --aug-border-bg: #f00;
+      --aug-br-clip: 18px;
+    }
+    .exit-btn-fail:hover {
+      background: #f00;
+      color: #181c22;
+      box-shadow: 0 0 12px #f00aa;
+    }
   </style>
 </head>
 <body>
@@ -987,6 +1014,17 @@ function showFailedFeedback() {
     el.classList.add('failed-seq');
   });
   $('failMsg').classList.remove('hide');
+
+  // Adiciona o botão de saída vermelho em caso de falha
+  let exitBtn = document.querySelector('.exit-btn-fail');
+  if (!exitBtn) {
+    exitBtn = document.createElement('button');
+    exitBtn.className = 'exit-btn-fail';
+    exitBtn.setAttribute('data-augmented-ui', 'br-clip border');
+    exitBtn.textContent = 'EXIT INTERFACE';
+    exitBtn.onclick = () => location.reload();
+    document.body.appendChild(exitBtn);
+  }
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
@@ -1096,16 +1134,21 @@ function showFailedFeedback() {
            cursorEl.style.display = 'block';
            
            // 3. Lógica de hover com posição suavizada
-           const isVisible = isInsideMatrix(smoothedX, smoothedY);
+           const isVisible = isInsideMatrix(smoothedX, smoothedY) || gameEnded;
            let currentElement = null;
+
            if(isVisible) {
-               const relativeX = smoothedX - gridRect.left;
-               const relativeY = smoothedY - gridRect.top;
-               const col = Math.floor(relativeX / cellWidth);
-               const row = Math.floor(relativeY / cellHeight);
-               const gridEl = document.getElementById('grid');
-               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                   currentElement = gridEl.rows[row].cells[col];
+               if (gameEnded) {
+                   currentElement = document.elementFromPoint(smoothedX, smoothedY);
+               } else {
+                   const relativeX = smoothedX - gridRect.left;
+                   const relativeY = smoothedY - gridRect.top;
+                   const col = Math.floor(relativeX / cellWidth);
+                   const row = Math.floor(relativeY / cellHeight);
+                   const gridEl = document.getElementById('grid');
+                   if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                       currentElement = gridEl.rows[row].cells[col];
+                   }
                }
            }
 
@@ -1117,11 +1160,15 @@ function showFailedFeedback() {
            }
            lastHoveredElement = currentElement;
 
-           // 4. Clique com Debounce de 500ms
+           // 4. Clique com Debounce de 750ms
            if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               onPick(currentElement);
+               if (currentElement.classList.contains('cell')) {
+                   onPick(currentElement);
+               } else if (gameEnded && (currentElement.classList.contains('exit-btn-success') || currentElement.classList.contains('exit-btn-fail'))) {
+                   currentElement.click();
+               }
                pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 500); // Cooldown de 500ms
+               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown de 750ms
            }
 
        } else {
