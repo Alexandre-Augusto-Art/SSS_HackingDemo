@@ -1011,53 +1011,72 @@ function showFailedFeedback() {
     let isPinching = false;
     let pinchCooldown = false;
     let lastHoveredElement = null;
-    let vCursor = { x: 0, y: 0, isVisible: false };
     let gridRect = null;
     let cellWidth = 0;
     let cellHeight = 0;
+    
+    // --- LÓGICA DE CONTROLE UNIFICADA E CORRIGIDA ---
 
-    function isInsideMatrix(x,y){
-      if (!gridRect) return false;
-      return x>=gridRect.left && x<=gridRect.right && y>=gridRect.top && y<=gridRect.bottom;
+    // 1. Criação do painel de debug
+    const hacksPanel = document.querySelector('.bp-hacks-panel');
+    const dbgBox = document.createElement('div');
+    dbgBox.id = 'hfDebug';
+    dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
+    Object.assign(dbgBox.style, {
+      background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
+      fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px',
+      border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
+    });
+    hacksPanel.insertAdjacentElement('afterend', dbgBox);
+
+    // 2. Variáveis de estado e helpers
+    let vCursor = { x: 0, y: 0 };
+
+    function isInsideMatrix(x, y) {
+        if (!gridRect) return false;
+        return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
     }
 
     // Medir a grade depois que a página carregar
     setTimeout(() => {
         const gridEl = document.getElementById('grid');
-        gridRect = gridEl.getBoundingClientRect();
-        if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
-            const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
-            cellWidth = cellRect.width;
-            cellHeight = cellRect.height;
+        if (gridEl) {
+            gridRect = gridEl.getBoundingClientRect();
+            if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
+                const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
+                cellWidth = cellRect.width;
+                cellHeight = cellRect.height;
+            }
         }
     }, 500);
- 
+
+    // 3. Controlador Mestre
     handsfree.use('masterController', ({ hands }) => {
         const cursorEl = document.getElementById('handsfree-cursor');
         const dbgXYEl = document.getElementById('dbgXY');
         const dbgPinchEl = document.getElementById('dbgPinch');
 
-        // 1. ATUALIZA POSIÇÃO DO CURSOR (usando dados brutos do modelo)
-        if (hands?.landmarks?.[0]?.[8]) { // Verifica se a ponta do dedo existe
+        let isVisible = false;
+        let isPinching = false;
+
+        if (hands?.landmarks?.[0]?.[8]) {
             const fingerTip = hands.landmarks[0][8];
             vCursor.x = window.innerWidth * (1 - fingerTip.x);
             vCursor.y = window.innerHeight * fingerTip.y;
-            vCursor.isVisible = isInsideMatrix(vCursor.x, vCursor.y);
+            isVisible = isInsideMatrix(vCursor.x, vCursor.y);
 
             if (cursorEl) {
                 cursorEl.style.left = `${vCursor.x}px`;
                 cursorEl.style.top = `${vCursor.y}px`;
-                cursorEl.style.display = vCursor.isVisible ? 'block' : 'none';
+                cursorEl.style.display = isVisible ? 'block' : 'none';
             }
 
-            // Calcula a célula alvo manualmente para maior precisão
             let currentElement = null;
-            if (vCursor.isVisible && gridRect && cellWidth > 0 && cellHeight > 0) {
+            if (isVisible && gridRect && cellWidth > 0 && cellHeight > 0) {
                 const relativeX = vCursor.x - gridRect.left;
                 const relativeY = vCursor.y - gridRect.top;
                 const col = Math.floor(relativeX / cellWidth);
                 const row = Math.floor(relativeY / cellHeight);
-                
                 const gridEl = document.getElementById('grid');
                 if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
                     currentElement = gridEl.rows[row].cells[col];
@@ -1072,19 +1091,17 @@ function showFailedFeedback() {
             }
             lastHoveredElement = currentElement;
         } else {
-            vCursor.isVisible = false;
             if (cursorEl) cursorEl.style.display = 'none';
         }
 
-        // 2. DETECTA PINÇA E DISPARA CLIQUE
         if (hands?.pinchState?.[0]) {
             const pinchStarted = hands.pinchState[0][0] === 'start';
             const pinchReleased = hands.pinchState[0][0] === 'released';
 
             if (pinchStarted && !pinchCooldown) {
                 isPinching = true;
-                if (lastHoveredElement && vCursor.isVisible) {
-                    onPick(lastHoveredElement); // Clica no elemento atualmente em hover
+                if (lastHoveredElement && isVisible) {
+                    onPick(lastHoveredElement);
                     pinchCooldown = true;
                 }
             }
@@ -1092,13 +1109,9 @@ function showFailedFeedback() {
                 isPinching = false;
                 pinchCooldown = false;
             }
-        } else {
-            isPinching = false;
-            pinchCooldown = false;
         }
 
-        // 3. ATUALIZA PAINEL DE DEBUG
-        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(vCursor.x)}  Y: ${Math.round(vCursor.y)}`;
+        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(vCursor.x)} Y: ${Math.round(vCursor.y)}`;
         if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinching ? 'DOWN' : 'UP'}`;
     });
  
