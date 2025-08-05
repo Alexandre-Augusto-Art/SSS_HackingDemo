@@ -1027,86 +1027,62 @@ function showFailedFeedback() {
     });
     // Insere logo DEPOIS do painel de hacks
     hacksPanel.insertAdjacentElement('afterend', dbgBox);
-
-    // 2. Variável global p/ estado da pinça
-    let pinchActive = false;
-
-    // 3. Atualizador central (executa a cada frame)
-    handsfree.use('debugUpdater', () => {
-      if(!handsfree.plugins || !handsfree.plugins.cursor) return;
-      const curPlugin = handsfree.plugins.cursor;
-      if (curPlugin.cursor) {
-        const { x, y } = curPlugin.cursor;
-        // Atualiza XY
-        document.getElementById('dbgXY').textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}`;
-      }
-      // Atualiza pinch
-      document.getElementById('dbgPinch').textContent = `Pinch: ${pinchActive ? 'DOWN' : 'UP'}`;
-    });
-
-    // 4. Detectar pinça pelo estado do modelo (clique ainda em teste)
-    handsfree.use('detectPinch', ({ hands }) => {
-      if (!hands?.pinchState?.[0]) return;
-      const started = hands.pinchState[0].some(s => s === 'start');
-      const released = hands.pinchState[0].every(s => s === 'released');
-      if (started) pinchActive = true;
-      if (released) pinchActive = false;
-    });
-
-    // Oculta/mostra cursor conforme posição e atualiza painel
-    handsfree.use('matrixLimiter', () => {
-      if(!handsfree.plugins || !handsfree.plugins.cursor) return;
-      const cur = handsfree.plugins.cursor;
-      if(!cur.cursor || typeof cur.cursor.x!=='number') return;
-      const {x, y} = cur.cursor;
-      if(typeof x==='number'&&typeof y==='number'){
-        const cursorEl = document.getElementById('handsfree-cursor');
-        if(cursorEl){
-          cursorEl.style.display = isInsideMatrix(x,y)?'block':'none';
-        }
-        // Atualiza painel debug
-        // dbg.textContent = `X: ${Math.round(x)}  Y: ${Math.round(y)}  Pinch: ${pinchActive ? 'DOWN':'UP'}`; // This line is now handled by debugUpdater
-      }
-    });
-
-    // Clique por pinça somente dentro da matrix
-    handsfree.on('gesture', ({gesture})=>{
-      if(gesture.name!=='pinch' || gesture.state!=='start') return;
-      if(!handsfree.plugins || !handsfree.plugins.cursor || !handsfree.plugins.cursor.cursor) return;
-      const {x,y}=handsfree.plugins.cursor.cursor;
-      if(isInsideMatrix(x,y)){
-        dispatchMouseEvent('mousedown',x,y);
-        dispatchMouseEvent('mouseup',x,y);
-        dispatchMouseEvent('click',x,y);
-      }
-    });
-
-    // Plugin que dispara clique usando estado pinchState do modelo
+ 
+    // --- LÓGICA DE CONTROLE UNIFICADA ---
+    let vCursor = { x: 0, y: 0, isVisible: false };
+    let isPinching = false;
     let pinchCooldown = false;
-    handsfree.use('pinchClick', ({hands}) => {
-      if(!hands || !hands.pinchState || !hands.pinchState[0]) return;
-      const fingerStates = hands.pinchState[0]; // primeira mão
-      // Verifica se algum dedo acabou de iniciar a pinça
-      const anyStart = fingerStates.some(s=>s==='start');
-      const allReleased = fingerStates.every(s=>s==='released');
 
-      if(anyStart && !pinchCooldown){
-        if(!handsfree.plugins || !handsfree.plugins.cursor || !handsfree.plugins.cursor.cursor) return;
-        const {x,y}=handsfree.plugins.cursor.cursor;
-        if(isInsideMatrix(x,y)){
-          dispatchMouseEvent('mousedown',x,y);
-          dispatchMouseEvent('mouseup',x,y);
-          dispatchMouseEvent('click',x,y);
+    handsfree.use('masterController', ({ hands }) => {
+        const cursorEl = document.getElementById('handsfree-cursor');
+        const dbgXYEl = document.getElementById('dbgXY');
+        const dbgPinchEl = document.getElementById('dbgPinch');
+
+        // 1. ATUALIZA POSIÇÃO DO CURSOR (usando dados brutos do modelo)
+        if (hands?.landmarks?.[0]) {
+            const fingerTip = hands.landmarks[0][8]; // Ponta do dedo indicador
+            vCursor.x = window.innerWidth * fingerTip.x;
+            vCursor.y = window.innerHeight * fingerTip.y;
+            vCursor.isVisible = isInsideMatrix(vCursor.x, vCursor.y);
+
+            if (cursorEl) {
+                cursorEl.style.left = `${vCursor.x}px`;
+                cursorEl.style.top = `${vCursor.y}px`;
+                cursorEl.style.display = vCursor.isVisible ? 'block' : 'none';
+            }
+        } else {
+            vCursor.isVisible = false;
+            if (cursorEl) cursorEl.style.display = 'none';
         }
-        pinchCooldown=true;
-        pinchActive=true;
-      }else if(allReleased){
-        // Reseta o cooldown quando soltar todos
-        pinchCooldown=false;
-        pinchActive=false;
-      }
-    });
 
+        // 2. DETECTA PINÇA E DISPARA CLIQUE
+        if (hands?.pinchState?.[0]) {
+            const pinchStarted = hands.pinchState[0][0] === 'start';
+            const pinchReleased = hands.pinchState[0][0] === 'released';
+
+            if (pinchStarted && !pinchCooldown) {
+                isPinching = true;
+                if (vCursor.isVisible) {
+                    dispatchMouseEvent('mousedown', vCursor.x, vCursor.y);
+                    dispatchMouseEvent('mouseup', vCursor.x, vCursor.y);
+                    dispatchMouseEvent('click', vCursor.x, vCursor.y);
+                    pinchCooldown = true;
+                }
+            }
+            if (pinchReleased) {
+                isPinching = false;
+                pinchCooldown = false;
+            }
+        } else {
+            isPinching = false;
+            pinchCooldown = false;
+        }
+
+        // 3. ATUALIZA PAINEL DE DEBUG
+        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(vCursor.x)}  Y: ${Math.round(vCursor.y)}`;
+        if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinching ? 'DOWN' : 'UP'}`;
+    });
+ 
     // Desativa plugin de scroll para evitar a página subir/descer durante pinch
     if(handsfree.plugin.pinchScroll){handsfree.plugin.pinchScroll.disable()}
     if(handsfree.plugin.faceScroll){handsfree.plugin.faceScroll.disable()}
