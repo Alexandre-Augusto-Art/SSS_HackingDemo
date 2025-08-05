@@ -1070,8 +1070,13 @@ function showFailedFeedback() {
        const cursorEl = document.getElementById('handsfree-cursor');
 
        if (hands?.landmarks?.[0]) {
-           // 1. Calcula o centro da palma para estabilidade
            const landmarks = hands.landmarks[0];
+           // Guarda de segurança para garantir que todos os pontos da palma existam
+           if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
+               return; // Pula este quadro se os dados estiverem incompletos
+           }
+
+           // 1. Calcula o centro da palma para estabilidade
            const p0 = landmarks[0];  // Pulso
            const p5 = landmarks[5];  // Base do indicador
            const p9 = landmarks[9];  // Base do meio
