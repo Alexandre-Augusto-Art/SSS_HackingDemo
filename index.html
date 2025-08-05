@@ -996,11 +996,46 @@ function showFailedFeedback() {
     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
     handsfree.enablePlugins('browser')
     handsfree.start()
-    document.body.style.cursor = 'none'
     // Esconde o vídeo da webcam que o Handsfree insere
     const styleHF = document.createElement('style');
-    styleHF.textContent = `video.handsfree-video{display:none!important;}#handsfree-cursor{width:24px;height:24px;border:2px solid #eaff00;border-radius:50%;background:rgba(234,255,0,.4);position:fixed;pointer-events:none;transform:translate(-50%,-50%);z-index:10000;mix-blend-mode:difference}`;
+    styleHF.textContent = `video.handsfree-video{display:none!important;}#handsfree-cursor{width:24px;height:24px;border:2px solid #eaff00;border-radius:50%;background:rgba(234,255,0,.4);position:fixed;pointer-events:none;transform:translate(-50%,-50%);z-index:10000;mix-blend-mode:difference} body{cursor:auto!important;}`;
     document.head.appendChild(styleHF);
+
+    // Utilidade para disparar eventos de mouse
+    function dispatchMouseEvent(type, x, y){
+      const evt = new MouseEvent(type, {clientX:x, clientY:y, bubbles:true});
+      const el = document.elementFromPoint(x, y);
+      if(el) el.dispatchEvent(evt);
+    }
+
+    const matrixArea = document.querySelector('#grid');
+    function isInsideMatrix(x,y){
+      const rect = matrixArea.getBoundingClientRect();
+      return x>=rect.left && x<=rect.right && y>=rect.top && y<=rect.bottom;
+    }
+
+    // Oculta/mostra cursor conforme posição
+    handsfree.use('matrixLimiter', () => {
+      const {x, y} = handsfree.plugins.cursor.cursor || {};
+      if(typeof x==='number'&&typeof y==='number'){
+        const cursorEl = document.getElementById('handsfree-cursor');
+        if(cursorEl){
+          cursorEl.style.display = isInsideMatrix(x,y)?'block':'none';
+        }
+      }
+    });
+
+    // Clique por pinça somente dentro da matrix
+    handsfree.on('gesture', ({gesture})=>{
+      if(gesture.name==='pinch' && gesture.state==='start'){
+        const {x,y}=handsfree.plugins.cursor.cursor;
+        if(isInsideMatrix(x,y)){
+          dispatchMouseEvent('mousedown',x,y);
+          dispatchMouseEvent('mouseup',x,y);
+          dispatchMouseEvent('click',x,y);
+        }
+      }
+    });
 
     // Desativa plugin de scroll para evitar a página subir/descer durante pinch
     if(handsfree.plugin.pinchScroll){handsfree.plugin.pinchScroll.disable()}
