@@ -1065,63 +1065,65 @@ function showFailedFeedback() {
         const dbgXYEl = document.getElementById('dbgXY');
         const dbgPinchEl = document.getElementById('dbgPinch');
 
-        if (hands?.landmarks?.[0]?.[8] && hands?.landmarks?.[0]?.[0]) {
-            const landmarks = hands.landmarks[0];
-            const palmCenter = landmarks[0];
-            const fingerTip = landmarks[8];
-
-            // Calcular vetor e aplicar escala
-            const vecX = fingerTip.x - palmCenter.x;
-            const vecY = fingerTip.y - palmCenter.y;
-            const scale = 8 * window.innerWidth / (gridRect?.width || window.innerWidth);
-
-            // Mapear vetor para a grade
-            const gridCenterX = gridRect ? gridRect.left + gridRect.width / 2 : window.innerWidth / 2;
-            const gridCenterY = gridRect ? gridRect.top + gridRect.height / 2 : window.innerHeight / 2;
-            let cursorX = gridCenterX + vecX * scale;
-            let cursorY = gridCenterY + vecY * scale * 1.5;
-
-            cursorEl.style.left = `${cursorX}px`;
-            cursorEl.style.top = `${cursorY}px`;
-
-            let currentElement = null;
-            if (isInsideMatrix(cursorX, cursorY) && gridRect && cellWidth > 0) {
-                 cursorEl.style.display = 'block';
-                const relativeX = cursorX - gridRect.left;
-                const relativeY = cursorY - gridRect.top;
-                const col = Math.floor(relativeX / cellWidth);
-                const row = Math.floor(relativeY / cellHeight);
-                const gridEl = document.getElementById('grid');
-                if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                    currentElement = gridEl.rows[row].cells[col];
-                }
-            } else {
-                cursorEl.style.display = 'none';
-            }
-
-            if (lastHoveredElement && lastHoveredElement !== currentElement) {
-                lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-            }
-            if (currentElement && currentElement !== lastHoveredElement) {
-                currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-            }
-            lastHoveredElement = currentElement;
-
-            // Gesto de clique (pinça)
-            const isPinchingNow = hands.pinchState[0][0] === 'start';
-            if (isPinchingNow && !pinchCooldown && currentElement) {
-                onPick(currentElement);
-                pinchCooldown = true;
-            } else if (hands.pinchState[0][0] === 'released') {
-                pinchCooldown = false;
-            }
-            
-            if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(cursorX)} Y: ${Math.round(cursorY)}`;
-            if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinchingNow ? 'DOWN' : 'UP'}`;
-
-        } else {
+        // Guarda de segurança: só executa se tivermos todos os dados necessários
+        if (!hands?.landmarks?.[0] || !hands?.pinchState?.[0]) {
             if (cursorEl) cursorEl.style.display = 'none';
+            return;
         }
+
+        const landmarks = hands.landmarks[0];
+        const palmCenter = landmarks[0];
+        const fingerTip = landmarks[8];
+
+        // Calcular vetor e aplicar escala
+        const vecX = fingerTip.x - palmCenter.x;
+        const vecY = fingerTip.y - palmCenter.y;
+        const scale = 8 * window.innerWidth / (gridRect?.width || window.innerWidth);
+
+        // Mapear vetor para a grade
+        const gridCenterX = gridRect ? gridRect.left + gridRect.width / 2 : window.innerWidth / 2;
+        const gridCenterY = gridRect ? gridRect.top + gridRect.height / 2 : window.innerHeight / 2;
+        let cursorX = gridCenterX + vecX * scale;
+        let cursorY = gridCenterY + vecY * scale * 1.5;
+
+        cursorEl.style.left = `${cursorX}px`;
+        cursorEl.style.top = `${cursorY}px`;
+
+        let currentElement = null;
+        if (isInsideMatrix(cursorX, cursorY) && gridRect && cellWidth > 0) {
+            cursorEl.style.display = 'block';
+            const relativeX = cursorX - gridRect.left;
+            const relativeY = cursorY - gridRect.top;
+            const col = Math.floor(relativeX / cellWidth);
+            const row = Math.floor(relativeY / cellHeight);
+            const gridEl = document.getElementById('grid');
+            if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                currentElement = gridEl.rows[row].cells[col];
+            }
+        } else {
+            cursorEl.style.display = 'none';
+        }
+
+        if (lastHoveredElement && lastHoveredElement !== currentElement) {
+            lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+        }
+        if (currentElement && currentElement !== lastHoveredElement) {
+            currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+        }
+        lastHoveredElement = currentElement;
+
+        // Gesto de clique (pinça)
+        const isPinchingNow = hands.pinchState[0][0] === 'start';
+        if (isPinchingNow && !pinchCooldown && currentElement) {
+            onPick(currentElement);
+            pinchCooldown = true;
+        } else if (hands.pinchState[0][0] === 'released') {
+            pinchCooldown = false;
+        }
+        
+        if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(cursorX)} Y: ${Math.round(cursorY)}`;
+        if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinchingNow ? 'DOWN' : 'UP'}`;
+
     });
  
     // Desativa plugin de scroll para evitar a página subir/descer durante pinch
