@@ -1206,8 +1206,17 @@ function showFailedFeedback() {
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
 
-       if (hands?.landmarks?.[0]) {
-           const landmarks = hands.landmarks[0];
+       // Determina qual mão usar (prioriza a direita, senão usa a primeira disponível)
+       let handIndex = 0;
+       if (hands?.handedness) {
+           const rightHandIndex = hands.handedness.findIndex(h => h === 'Right');
+           if (rightHandIndex > -1) {
+               handIndex = rightHandIndex;
+           }
+       }
+
+       if (hands?.landmarks?.[handIndex]) {
+           const landmarks = hands.landmarks[handIndex];
            // Guarda de segurança para garantir que todos os pontos da palma existam
            if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
                return; // Pula este quadro se os dados estiverem incompletos
@@ -1255,7 +1264,7 @@ function showFailedFeedback() {
            lastHoveredElement = currentElement;
 
            // 4. Clique com Debounce de 750ms
-           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
+           if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
                onPick(currentElement);
                pinchCooldown = true;
                setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms

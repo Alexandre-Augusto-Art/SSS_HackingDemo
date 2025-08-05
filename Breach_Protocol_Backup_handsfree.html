@@ -642,6 +642,107 @@
       color: #0b2e1a;
       box-shadow: 0 0 12px #00ff99aa;
     }
+
+    .exit-btn-fail {
+      background: transparent;
+      color: #f00;
+      font-family: 'ChakraPetch', monospace;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 16px 48px;
+      border: 2px solid #f00;
+      cursor: pointer;
+      position: fixed;
+      right: 48px;
+      bottom: 48px;
+      z-index: 200;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      --aug-border-all: 2px;
+      --aug-border-bg: #f00;
+      --aug-br-clip: 18px;
+    }
+
+    .exit-btn-fail:hover {
+      background: #f00;
+      color: #2b0000;
+      box-shadow: 0 0 12px #ff0000aa;
+    }
+    .toggle-btn {
+      position: relative;
+      background: #444444; /* Cor de fundo padrão */
+      color: #ffffff; /* Cor do texto padrão */
+      border: 2px solid #666666; /* Cor da borda padrão */
+      border-radius: 20px;
+      font-family: "'ChakraPetch', monospace";
+      font-weight: bold;
+      font-size: 0.9em;
+      padding: 8px 16px 8px 40px; /* Espaço para o switch */
+      margin: 0 24px 12px 24px;
+      cursor: pointer;
+      width: 180px;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .toggle-btn.active {
+      background: #00c853; /* Verde para "ON" */
+      color: #000000;
+      border-color: #00c853;
+    }
+    .toggle-btn .toggle-switch {
+      position: absolute;
+      left: 4px; /* Posição inicial do switch */
+      top: 4px;
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: left 0.3s;
+    }
+    /* Novo estilo para o container do Toggle, alinhado com a identidade visual */
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      background: #181c22;
+      border: 2px solid #eaff00;
+      border-radius: 6px;
+      margin: 0 24px 12px 24px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-family: "'ChakraPetch', monospace";
+      font-size: 0.9em;
+      color: #eaff00;
+      width: 180px;
+      box-sizing: border-box;
+    }
+    .toggle-container .toggle-switch-visual {
+      position: relative;
+      width: 44px;
+      height: 24px;
+      background: #444;
+      border-radius: 12px;
+      margin-right: 12px;
+      transition: background-color 0.3s;
+    }
+    .toggle-container .toggle-switch-visual::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 20px;
+      height: 20px;
+      background: #fff;
+      border-radius: 50%;
+      transition: left 0.3s;
+      pointer-events: none; /* Garante que o clique seja no container */
+    }
+    .toggle-container.active .toggle-switch-visual {
+      background: #00c853;
+    }
+    .toggle-container.active .toggle-switch-visual::before {
+      left: 22px;
+    }
   </style>
 </head>
 <body>
@@ -987,6 +1088,17 @@ function showFailedFeedback() {
     el.classList.add('failed-seq');
   });
   $('failMsg').classList.remove('hide');
+
+  // Adiciona o botão de EXIT vermelho
+  let exitBtn = document.querySelector('.exit-btn-fail');
+  if (!exitBtn) {
+    exitBtn = document.createElement('button');
+    exitBtn.className = 'exit-btn-fail';
+    exitBtn.setAttribute('data-augmented-ui', 'br-clip border');
+    exitBtn.textContent = 'EXIT INTERFACE';
+    exitBtn.onclick = () => location.reload();
+    document.body.appendChild(exitBtn);
+  }
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
@@ -1037,6 +1149,31 @@ function showFailedFeedback() {
        border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
      });
      hacksPanel.insertAdjacentElement('afterend', dbgBox);
+
+     // Botão para Habilitar/Desabilitar Handsfree
+     const toggleBtn = document.createElement('div');
+     toggleBtn.className = 'toggle-container active'; // Usando a nova classe
+     toggleBtn.innerHTML = `
+       <div class="toggle-switch-visual"></div>
+       <span class="toggle-text">Handsfree ON</span>
+     `;
+     dbgBox.insertAdjacentElement('afterend', toggleBtn);
+
+     let isHandsfreeEnabled = true;
+     toggleBtn.addEventListener('click', () => {
+       isHandsfreeEnabled = !isHandsfreeEnabled;
+       toggleBtn.classList.toggle('active');
+       const textEl = toggleBtn.querySelector('.toggle-text');
+
+       if (isHandsfreeEnabled) {
+         handsfree.unpause(); // Alterado de start() para unpause()
+         textEl.textContent = 'Handsfree ON';
+       } else {
+         handsfree.pause(); // Alterado de stopMedia() para pause()
+         textEl.textContent = 'Handsfree OFF';
+         document.getElementById('handsfree-cursor').style.display = 'none'; // Esconde o cursor
+       }
+     });
  
      // --- LÓGICA DE CONTROLE UNIFICADA E FINAL ---
  
@@ -1117,11 +1254,11 @@ function showFailedFeedback() {
            }
            lastHoveredElement = currentElement;
 
-           // 4. Clique com Debounce de 500ms
+           // 4. Clique com Debounce de 750ms
            if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
                onPick(currentElement);
                pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 500); // Cooldown de 500ms
+               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
            }
 
        } else {
