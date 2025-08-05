@@ -4,13 +4,9 @@
   <meta charset="UTF-8">
   <title>Breach Protocol – Mini‑game</title>
   <link rel="stylesheet" href="https://unpkg.com/augmented-ui@2/augmented-ui.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;700&display=swap" rel="stylesheet">
   <style>
-    @font-face {
-      font-family: 'ChakraPetch';
-      src: url('C:/Users/Fanatee/Downloads/ChakraPetch-Light.ttf') format('truetype');
-      font-weight: 300 700;
-      font-display: swap;
-    }
+    /* Fonte carregada via Google Fonts no <head>; @font-face local removido */
     body {
       background: #000000;
       color: #eaff00;
@@ -993,7 +989,7 @@ function showFailedFeedback() {
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
-<script defer src="https://unpkg.com/handsfree@8.5.0/build/handsfree.js"></script>
+<script defer src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
