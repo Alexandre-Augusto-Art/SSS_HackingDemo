@@ -643,7 +643,6 @@
       box-shadow: 0 0 12px #00ff99aa;
     }
 
-    /* Botão de Saída em caso de falha (vermelho) */
     .exit-btn-fail {
       background: transparent;
       color: #f00;
@@ -664,10 +663,11 @@
       --aug-border-bg: #f00;
       --aug-br-clip: 18px;
     }
+
     .exit-btn-fail:hover {
       background: #f00;
-      color: #181c22;
-      box-shadow: 0 0 12px #f00aa;
+      color: #2b0000;
+      box-shadow: 0 0 12px #ff0000aa;
     }
   </style>
 </head>
@@ -1015,7 +1015,7 @@ function showFailedFeedback() {
   });
   $('failMsg').classList.remove('hide');
 
-  // Adiciona o botão de saída vermelho em caso de falha
+  // Adiciona o botão de EXIT vermelho
   let exitBtn = document.querySelector('.exit-btn-fail');
   if (!exitBtn) {
     exitBtn = document.createElement('button');
@@ -1134,28 +1134,17 @@ function showFailedFeedback() {
            cursorEl.style.display = 'block';
            
            // 3. Lógica de hover com posição suavizada
-           const isVisible = isInsideMatrix(smoothedX, smoothedY) || gameEnded;
+           const isVisible = isInsideMatrix(smoothedX, smoothedY);
            let currentElement = null;
-
            if(isVisible) {
-               if (gameEnded) {
-                   // Após o jogo, o cursor fica ativo em toda a tela
-                   cursorEl.style.display = 'block';
-                   currentElement = document.elementFromPoint(smoothedX, smoothedY);
-               } else {
-                   // Durante o jogo, o cursor só é visível na matriz
-                   cursorEl.style.display = isInsideMatrix(smoothedX, smoothedY) ? 'block' : 'none';
-                   const relativeX = smoothedX - gridRect.left;
-                   const relativeY = smoothedY - gridRect.top;
-                   const col = Math.floor(relativeX / cellWidth);
-                   const row = Math.floor(relativeY / cellHeight);
-                   const gridEl = document.getElementById('grid');
-                   if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                       currentElement = gridEl.rows[row].cells[col];
-                   }
+               const relativeX = smoothedX - gridRect.left;
+               const relativeY = smoothedY - gridRect.top;
+               const col = Math.floor(relativeX / cellWidth);
+               const row = Math.floor(relativeY / cellHeight);
+               const gridEl = document.getElementById('grid');
+               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                   currentElement = gridEl.rows[row].cells[col];
                }
-           } else {
-               cursorEl.style.display = 'none';
            }
 
            if (lastHoveredElement && lastHoveredElement !== currentElement) {
@@ -1168,13 +1157,9 @@ function showFailedFeedback() {
 
            // 4. Clique com Debounce de 750ms
            if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               if (!gameEnded && currentElement.classList.contains('cell')) {
-                   onPick(currentElement);
-               } else if (gameEnded && (currentElement.classList.contains('exit-btn-success') || currentElement.classList.contains('exit-btn-fail'))) {
-                   currentElement.click();
-               }
+               onPick(currentElement);
                pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown de 750ms
+               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
            }
 
        } else {
