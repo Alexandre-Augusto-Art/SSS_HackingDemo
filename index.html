@@ -1013,7 +1013,6 @@ function showFailedFeedback() {
          border-radius: 50%;
          background: rgba(234, 255, 0, 0.4);
          pointer-events: none;
-         /* Movido para JS para evitar conflito com left/top */
          z-index: 10000;
          mix-blend-mode: difference;
          display: none; /* Inicia oculto */
@@ -1026,6 +1025,18 @@ function showFailedFeedback() {
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
+ 
+     // 3. Criação do painel de debug
+     const hackList = document.getElementById('hackList');
+     const dbgBox = document.createElement('div');
+     dbgBox.id = 'hfDebug';
+     dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
+     Object.assign(dbgBox.style, {
+       background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
+       fontSize:'0.9em',padding:'10px 16px',margin:'12px 0',
+       border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
+     });
+     hackList.appendChild(dbgBox);
  
      // 3. Controlador Mestre (Versão final usando hands.pointer)
      handsfree.use('precisionController', ({ hands }) => {
