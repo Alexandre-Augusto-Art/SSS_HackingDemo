@@ -669,6 +669,37 @@
       color: #2b0000;
       box-shadow: 0 0 12px #ff0000aa;
     }
+    .toggle-btn {
+      position: relative;
+      background: #444444; /* Cor de fundo padrão */
+      color: #ffffff; /* Cor do texto padrão */
+      border: 2px solid #666666; /* Cor da borda padrão */
+      border-radius: 20px;
+      font-family: "'ChakraPetch', monospace";
+      font-weight: bold;
+      font-size: 0.9em;
+      padding: 8px 16px 8px 40px; /* Espaço para o switch */
+      margin: 0 24px 12px 24px;
+      cursor: pointer;
+      width: 180px;
+      text-align: center;
+      transition: background-color 0.3s;
+    }
+    .toggle-btn.active {
+      background: #00c853; /* Verde para "ON" */
+      color: #000000;
+      border-color: #00c853;
+    }
+    .toggle-btn .toggle-switch {
+      position: absolute;
+      left: 4px; /* Posição inicial do switch */
+      top: 4px;
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: left 0.3s;
+    }
   </style>
 </head>
 <body>
@@ -1077,35 +1108,61 @@ function showFailedFeedback() {
      hacksPanel.insertAdjacentElement('afterend', dbgBox);
 
      // Botão para Habilitar/Desabilitar Handsfree
-     const toggleBtn = document.createElement('button');
-     toggleBtn.textContent = 'Desativar Handsfree';
+     const toggleBtn = document.createElement('div'); // Alterado para div para conter o switch
+     toggleBtn.className = 'toggle-btn active'; // Classe para estilização e estado
+     toggleBtn.innerHTML = '<span class="toggle-switch"></span> Handsfree ON';
+
      Object.assign(toggleBtn.style, {
-       background: '#181c22',
-       color: '#eaff00',
-       border: '2px solid #eaff00',
-       borderRadius: '6px',
+       position: 'relative',
+       background: '#00c853', // Verde para "ON"
+       color: '#000000',
+       border: '2px solid #00c853',
+       borderRadius: '20px',
        fontFamily: "'ChakraPetch', monospace",
+       fontWeight: 'bold',
        fontSize: '0.9em',
-       padding: '8px 16px',
+       padding: '8px 16px 8px 40px', // Espaço para o switch
        margin: '0 24px 12px 24px',
        cursor: 'pointer',
-       width: '180px'
+       width: '180px',
+       textAlign: 'center',
+       transition: 'background-color 0.3s'
      });
      dbgBox.insertAdjacentElement('afterend', toggleBtn);
+
+     const toggleSwitch = toggleBtn.querySelector('.toggle-switch');
+     Object.assign(toggleSwitch.style, {
+       position: 'absolute',
+       left: '4px',
+       top: '4px',
+       width: '24px',
+       height: '24px',
+       background: '#ffffff',
+       borderRadius: '50%',
+       transition: 'left 0.3s'
+     });
+
 
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
        isHandsfreeEnabled = !isHandsfreeEnabled;
+       toggleBtn.classList.toggle('active');
+
        if (isHandsfreeEnabled) {
          handsfree.start();
-         toggleBtn.textContent = 'Desativar Handsfree';
-         toggleBtn.style.color = '#eaff00';
-         toggleBtn.style.borderColor = '#eaff00';
+         toggleBtn.innerHTML = '<span class="toggle-switch"></span> Handsfree ON';
+         toggleBtn.style.background = '#00c853';
+         toggleBtn.style.borderColor = '#00c853';
+         toggleBtn.style.color = '#000000';
+         toggleBtn.querySelector('.toggle-switch').style.left = '4px';
+
        } else {
-         handsfree.stop();
-         toggleBtn.textContent = 'Ativar Handsfree';
-         toggleBtn.style.color = '#ff4d4d';
-         toggleBtn.style.borderColor = '#ff4d4d';
+         handsfree.stopMedia(); // Usa stopMedia() para desligar a câmera
+         toggleBtn.innerHTML = '<span class="toggle-switch"></span> Handsfree OFF';
+         toggleBtn.style.background = '#444444';
+         toggleBtn.style.borderColor = '#666666';
+         toggleBtn.style.color = '#ffffff';
+         toggleBtn.querySelector('.toggle-switch').style.left = 'calc(100% - 28px)';
        }
      });
  
