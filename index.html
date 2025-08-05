@@ -1063,9 +1063,10 @@ function showFailedFeedback() {
             if (pinchStarted && !pinchCooldown) {
                 isPinching = true;
                 if (vCursor.isVisible) {
-                    dispatchMouseEvent('mousedown', vCursor.x, vCursor.y);
-                    dispatchMouseEvent('mouseup', vCursor.x, vCursor.y);
-                    dispatchMouseEvent('click', vCursor.x, vCursor.y);
+                    const targetElement = document.elementFromPoint(vCursor.x, vCursor.y);
+                    if (targetElement && targetElement.classList.contains('cell')) {
+                        onPick(targetElement); // Chama a função do jogo diretamente
+                    }
                     pinchCooldown = true;
                 }
             }
