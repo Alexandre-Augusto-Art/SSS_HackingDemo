@@ -1075,6 +1075,39 @@ function showFailedFeedback() {
        border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
      });
      hacksPanel.insertAdjacentElement('afterend', dbgBox);
+
+     // Botão para Habilitar/Desabilitar Handsfree
+     const toggleBtn = document.createElement('button');
+     toggleBtn.textContent = 'Desativar Handsfree';
+     Object.assign(toggleBtn.style, {
+       background: '#181c22',
+       color: '#eaff00',
+       border: '2px solid #eaff00',
+       borderRadius: '6px',
+       fontFamily: "'ChakraPetch', monospace",
+       fontSize: '0.9em',
+       padding: '8px 16px',
+       margin: '0 24px 12px 24px',
+       cursor: 'pointer',
+       width: '180px'
+     });
+     dbgBox.insertAdjacentElement('afterend', toggleBtn);
+
+     let isHandsfreeEnabled = true;
+     toggleBtn.addEventListener('click', () => {
+       isHandsfreeEnabled = !isHandsfreeEnabled;
+       if (isHandsfreeEnabled) {
+         handsfree.start();
+         toggleBtn.textContent = 'Desativar Handsfree';
+         toggleBtn.style.color = '#eaff00';
+         toggleBtn.style.borderColor = '#eaff00';
+       } else {
+         handsfree.stop();
+         toggleBtn.textContent = 'Ativar Handsfree';
+         toggleBtn.style.color = '#ff4d4d';
+         toggleBtn.style.borderColor = '#ff4d4d';
+       }
+     });
  
      // --- LÓGICA DE CONTROLE UNIFICADA E FINAL ---
  
