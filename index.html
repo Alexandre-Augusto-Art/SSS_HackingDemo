@@ -1011,9 +1011,15 @@ function showFailedFeedback() {
     let isPinching = false;
     let pinchCooldown = false;
     let lastHoveredElement = null;
+    let vCursor = { x: 0, y: 0, isVisible: false };
     let gridRect = null;
     let cellWidth = 0;
     let cellHeight = 0;
+
+    function isInsideMatrix(x,y){
+      if (!gridRect) return false;
+      return x>=gridRect.left && x<=gridRect.right && y>=gridRect.top && y<=gridRect.bottom;
+    }
 
     // Medir a grade depois que a página carregar
     setTimeout(() => {
