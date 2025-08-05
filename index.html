@@ -382,46 +382,37 @@
       letter-spacing: 0.2em;
       margin-right: 24px;
     }
-    .bp-upload-btn {
-      background: #10131a;
-      border: 2px solid #eaff00;
-      color: #eaff00;
-      padding: 10px 28px;
-      cursor: pointer;
-      font-family: 'Orbitron', monospace;
+    .bp-upload-btn, .bp-restart-btn, .exit-btn {
+      background: #0a0a0a;
+      color: #ffe600;
+      border: none;
+      font-family: 'ChakraPetch', 'Orbitron', monospace;
       font-size: 1.1em;
-      border-radius: 4px;
-      text-transform: uppercase;
       font-weight: 700;
-      letter-spacing: 1px;
-      box-shadow: none;
-      transition: background 0.2s, color 0.2s;
-      margin-right: 16px;
-    }
-    .bp-upload-btn:hover {
-      background: #eaff00;
-      color: #10131a;
-    }
-    .bp-restart-btn {
-      background: #000000;
-      border: 1px solid #eaff00;
-      color: #eaff00;
-      padding: 2px 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      box-shadow: 0 0 8px #ffe60088, 0 0 0 #0000;
+      padding: 12px 36px;
+      margin: 18px 8px 0 0;
       cursor: pointer;
-      font-family: 'Orbitron', monospace;
-      font-size: 0.8em;
-      border-radius: 3px;
-      text-transform: uppercase;
-      font-weight: 700;
-      letter-spacing: 1px;
-      box-shadow: none;
-      transition: background 0.2s, color 0.2s;
-      height: 20px;
-      line-height: 16px;
+      position: relative;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      outline: none;
+      --aug-border-all: 2.5px;
+      --aug-border-bg: #ffe600;
+      --aug-tl-clip: 18px;
+      --aug-br-clip: 18px;
     }
-    .bp-restart-btn:hover {
-      background: #eaff00;
-      color: #10131a;
+    .bp-upload-btn[data-augmented-ui], .bp-restart-btn[data-augmented-ui], .exit-btn[data-augmented-ui] {
+      --aug-border-all: 2.5px;
+      --aug-border-bg: #ffe600;
+      --aug-tl-clip: 18px;
+      --aug-br-clip: 18px;
+    }
+    .bp-upload-btn:hover, .bp-restart-btn:hover, .exit-btn:hover {
+      background: #ffe600;
+      color: #0a0a0a;
+      box-shadow: 0 0 16px #ffe600cc, 0 0 0 #0000;
     }
     .hide { display: none; }
     .win, .failbox {
@@ -625,6 +616,34 @@
         margin-right: 4px;
         box-sizing: border-box;
       }
+    }
+    /* === EXIT BUTTON – CYBERPUNK STYLE (inspired by buttons_xAjLD) === */
+    .exit-btn-success {
+      background: transparent;
+      color: #00ff99;
+      font-family: 'ChakraPetch', monospace;
+      font-size: 1.2em;
+      font-weight: bold;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 16px 48px;
+      border: 2px solid #00ff99;
+      cursor: pointer;
+      position: fixed;
+      right: 48px;
+      bottom: 48px;
+      z-index: 200;
+      transition: background 0.2s, color 0.2s, box-shadow 0.2s;
+      /* augmented-ui rectangular clips */
+      --aug-border-all: 2px;
+      --aug-border-bg: #00ff99;
+      --aug-br-clip: 18px;
+    }
+
+    .exit-btn-success:hover {
+      background: #00ff99;
+      color: #0b2e1a;
+      box-shadow: 0 0 12px #00ff99aa;
     }
   </style>
 </head>
@@ -956,22 +975,8 @@ function showSuccessFeedback(completedArr, failedArr) {
       if (!exitBtn) {
         exitBtn = document.createElement('button');
         exitBtn.className = 'exit-btn-success';
+        exitBtn.setAttribute('data-augmented-ui', 'br-clip border');
         exitBtn.textContent = 'EXIT INTERFACE';
-        exitBtn.style.background = 'transparent';
-        exitBtn.style.color = '#00ff99';
-        exitBtn.style.fontFamily = "'ChakraPetch', monospace";
-        exitBtn.style.fontSize = '1.2em';
-        exitBtn.style.fontWeight = 'bold';
-        exitBtn.style.border = '2.5px solid #00ff99';
-        exitBtn.style.padding = '18px 64px';
-        exitBtn.style.display = 'block';
-        exitBtn.style.cursor = 'pointer';
-        exitBtn.style.letterSpacing = '0.1em';
-        exitBtn.style.textTransform = 'uppercase';
-        exitBtn.style.position = 'fixed';
-        exitBtn.style.right = '64px';
-        exitBtn.style.bottom = '48px';
-        exitBtn.style.zIndex = '200';
         exitBtn.onclick = () => location.reload();
         document.body.appendChild(exitBtn);
       }
