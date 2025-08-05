@@ -993,9 +993,9 @@ function showFailedFeedback() {
 <script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-    const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false});
-    handsfree.enablePlugins('browser');
-    handsfree.start();
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
+     handsfree.enablePlugins('browser'); // Reativado para obter `hands.pointer`
+     handsfree.start()
  
      // --- Criação de Elementos da Interface (Cursor, Debug) ---
  
@@ -1003,6 +1003,8 @@ function showFailedFeedback() {
      const styleEl = document.createElement('style');
      styleEl.textContent = `
        video.handsfree-video { display: none !important; }
+       /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
+       .handsfree-pointer { display: none !important; }
        #handsfree-cursor {
          position: fixed;
          width: 24px;
@@ -1025,23 +1027,21 @@ function showFailedFeedback() {
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
  
-     // 3. Controlador Mestre (Versão final usando landmarks)
+     // 3. Controlador Mestre (Versão final usando hands.pointer)
      handsfree.use('precisionController', ({ hands }) => {
          const cursorEl = document.getElementById('handsfree-cursor');
          const dbgXYEl = document.getElementById('dbgXY');
          const dbgPinchEl = document.getElementById('dbgPinch');
  
-         // Guarda de segurança: só executa se tivermos dados da mão e estado da pinça
-         if (!hands?.landmarks?.[0]?.[8] || !hands?.pinchState?.[0]) {
+         // Guarda de segurança: só executa se o ponteiro e o estado da pinça existirem
+         if (typeof hands?.pointer?.x !== 'number' || typeof hands?.pointer?.y !== 'number' || !hands?.pinchState?.[0]) {
              if (cursorEl) cursorEl.style.display = 'none';
              return;
          }
  
-         // 1. Calcula a posição a partir da ponta do dedo indicador
-         const fingerTip = hands.landmarks[0][8];
-         const x = window.innerWidth * (1 - fingerTip.x); // Inverte para espelhar
-         const y = window.innerHeight * fingerTip.y;
+         const { x, y } = hands.pointer;
  
+         // 1. Atualiza a posição do cursor amarelo
          cursorEl.style.left = `${x}px`;
          cursorEl.style.top = `${y}px`;
  
@@ -1082,10 +1082,8 @@ function showFailedFeedback() {
          if (dbgXYEl) dbgXYEl.textContent = `X: ${Math.round(x)} Y: ${Math.round(y)}`;
          if (dbgPinchEl) dbgPinchEl.textContent = `Pinch: ${isPinchingNow ? 'DOWN' : 'UP'}`;
      });
-  
-      // Desativa plugins de scroll (se existirem)
-      if(handsfree.plugin.pinchScroll) handsfree.plugin.pinchScroll.disable();
-      if(handsfree.plugin.faceScroll) handsfree.plugin.faceScroll.disable();
+ 
+     // Desativa plugins de scroll (se existirem, o que não deve acontecer)
     handsfree.on('deviceError', err => {
       alert('Não foi possível acessar a câmera. Verifique permissões de site e conexão HTTPS.')
       console.error(err)
