@@ -746,6 +746,21 @@
     video.handsfree-video {
         transform: scaleX(-1);
     }
+    /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
+    .handsfree-pointer { display: none !important; }
+    #handsfree-cursor {
+      position: fixed;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #00ffff; /* Cor alterada para ciano */
+      border-radius: 50%;
+      background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
+      pointer-events: none;
+      z-index: 10000;
+      mix-blend-mode: difference;
+      display: none; /* Inicia oculto */
+    }
+    body { cursor: auto !important; }
   </style>
 </head>
 <body>
