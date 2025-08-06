@@ -1256,6 +1256,12 @@ function showFailedFeedback() {
           ctx.fill();
         });
       }
+
+      // Utilitário para verificar se o cursor está dentro da área da matriz
+      function isInsideMatrix(x, y) {
+        if (!gridRect) return false;
+        return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
+      }
  
      setTimeout(() => {
          const gridEl = document.getElementById('grid');
