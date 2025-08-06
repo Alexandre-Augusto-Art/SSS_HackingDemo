@@ -1132,37 +1132,76 @@ function showFailedFeedback() {
        }
        body { cursor: auto !important; }
 
-       /* Estilos para a mini-view da câmera com os pontos de referência */
-       #handsfree-debug-wrapper {
+       /* Estilos para o novo painel da câmera */
+       #camera-feed-panel {
          position: fixed;
          bottom: 20px;
          right: 20px;
-         width: 240px;
-         height: 180px;
-         border: 3px solid #eaff00;
-         border-radius: 6px;
-         overflow: hidden;
+         height: 250px;
+         /* Largura para manter proporção 4:3 com 250px de altura */
+         width: 333px; 
          z-index: 1000;
+         /* Herda .bp-matrix-panel (flex-direction: column) */
        }
-       #handsfree-debug-wrapper video,
-       #handsfree-debug-wrapper canvas {
-         width: 100% !important;
-         height: 100% !important;
-         display: block !important;
+       #camera-feed-content {
+         position: relative;
+         flex-grow: 1; /* Ocupa o espaço restante no painel */
+         overflow: hidden;
+         background: #000;
+       }
+       #camera-feed-content video,
+       #camera-feed-content canvas {
          position: absolute !important;
          top: 0 !important;
          left: 0 !important;
+         width: 100% !important;
+         height: 100% !important;
          object-fit: cover;
+       }
+       /* Escondemos o wrapper original, pois moveremos seu conteúdo */
+       #handsfree-debug-wrapper {
+         display: none !important;
        }
      `;
      document.head.appendChild(styleEl);
  
-     // 2. Cria e anexa o elemento do cursor que estava faltando
+     // 2. Cria e anexa o elemento do cursor
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
  
-     // 3. Botão para Habilitar/Desabilitar Handsfree
+     // 3. Cria o novo painel para a câmera, com a mesma moldura do matrix-panel
+     const cameraPanel = document.createElement('div');
+     cameraPanel.id = 'camera-feed-panel';
+     cameraPanel.className = 'bp-matrix-panel'; // Reutiliza a classe existente para a moldura
+     cameraPanel.setAttribute('data-augmented-ui', 'br-clip border');
+     
+     const cameraHeader = document.createElement('div');
+     cameraHeader.className = 'panel-header'; // Reutiliza a classe do header
+     cameraHeader.textContent = 'CAMERA FEED';
+     
+     const cameraContent = document.createElement('div');
+     cameraContent.id = 'camera-feed-content';
+
+     cameraPanel.appendChild(cameraHeader);
+     cameraPanel.appendChild(cameraContent);
+     document.body.appendChild(cameraPanel);
+
+     // 4. Lógica para mover o vídeo da câmera para nosso novo painel
+     const videoMoverInterval = setInterval(() => {
+       const handsfreeWrapper = document.querySelector('#handsfree-debug-wrapper');
+       if (handsfreeWrapper) {
+         const video = handsfreeWrapper.querySelector('video');
+         const canvas = handsfreeWrapper.querySelector('canvas');
+         if (video && canvas) {
+           cameraContent.appendChild(video);
+           cameraContent.appendChild(canvas);
+           clearInterval(videoMoverInterval);
+         }
+       }
+     }, 100);
+
+     // 5. Botão para Habilitar/Desabilitar Handsfree
      const hacksPanel = document.querySelector('.bp-hacks-panel');
      const toggleBtn = document.createElement('div');
      toggleBtn.className = 'toggle-container active';
