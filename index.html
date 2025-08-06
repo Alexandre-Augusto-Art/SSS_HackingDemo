@@ -1292,24 +1292,41 @@ const ROI_HEIGHT = 0.32;
     // Atualiza ROI dinamicamente com base no ombro direito (landmark 12)
     handsfree.use('roiFromShoulder', data => {
       const landmarks = data.pose?.landmarks || data.poseLandmarks;
-      if (!landmarks || !landmarks[12]) return;
-      const sx = landmarks[12].x;
-      const sy = landmarks[12].y;
+      if (!landmarks || (!landmarks[12] && !landmarks[11])) return;
 
-      const OFFSET = 0.05; // 5% após o ombro
-      let left = sx + OFFSET;
-      // Mantém ROI dentro do quadro
-      if (left + ROI_WIDTH > 1) left = 1 - ROI_WIDTH;
-      if (left < 0) left = 0;
+      // Use ombro mais à ESQUERDA (menor X) para colocar ROI "para fora" do corpo
+      const rightShoulder = landmarks[12]; // ombro direito
+      const leftShoulder  = landmarks[11]; // ombro esquerdo
+      const shoulder = (leftShoulder && rightShoulder)
+        ? (leftShoulder.x < rightShoulder.x ? leftShoulder : rightShoulder)
+        : (leftShoulder || rightShoulder);
 
+      const sx = shoulder.x;
+      const sy = shoulder.y;
+
+      const OFFSET = 0.02;               // pequena folga do ombro
+      // Se ombro está à esquerda, ROI cresce para a esquerda; se à direita, cresce para a direita
+      let xMin, xMax;
+      if (sx < 0.5) {
+        // ombro esquerdo (na imagem), ROI fica à esquerda do ombro
+        xMax = Math.max(sx - OFFSET, ROI_WIDTH);
+        xMin = xMax - ROI_WIDTH;
+      } else {
+        // ombro direito, ROI à direita
+        xMin = Math.min(sx + OFFSET, 1 - ROI_WIDTH);
+        xMax = xMin + ROI_WIDTH;
+      }
+
+      // Eixo Y: centralizado no ombro
       let top = sy - ROI_HEIGHT / 2;
       if (top < 0) top = 0;
       if (top + ROI_HEIGHT > 1) top = 1 - ROI_HEIGHT;
+      const bottom = top + ROI_HEIGHT;
 
-      ROI.xMin = left;
-      ROI.xMax = left + ROI_WIDTH;
+      ROI.xMin = xMin;
+      ROI.xMax = xMax;
       ROI.yMin = top;
-      ROI.yMax = top + ROI_HEIGHT;
+      ROI.yMax = bottom;
     });
 
 
