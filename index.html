@@ -1223,40 +1223,49 @@ function showFailedFeedback() {
 
     handsfree.use('minimalController', ({ hands }) => {
       const cursorEl = document.getElementById('handsfree-cursor');
-      const handStatusEl = document.getElementById('handStatus'); // Pega o novo elemento
+      const handStatusEl = document.getElementById('handStatus');
 
-      // A verificação agora inclui `hands.handedness` para evitar erros
-      if (hands?.landmarks?.[0] && hands?.handedness?.[0]) {
+      // Modificação: Apenas checa por landmarks para garantir que o cursor sempre apareça se uma mão for detectada.
+      if (hands?.landmarks?.[0]) {
           const landmarks = hands.landmarks[0];
-          const handedness = hands.handedness[0]; // Agora é seguro acessar
+          // A verificação de handedness é movida para dentro, e não bloqueia a renderização.
+          const handedness = hands?.handedness?.[0]; 
 
           // Atualiza o indicador de status da mão
-          if (handedness === 'Right') {
-            handStatusEl.textContent = 'Mão Direita';
-          } else if (handedness === 'Left') {
-            handStatusEl.textContent = 'Mão Esquerda';
+          if (handStatusEl) {
+            if (handedness === 'Right') {
+              handStatusEl.textContent = 'Mão Direita';
+            } else if (handedness === 'Left') {
+              handStatusEl.textContent = 'Mão Esquerda';
+            } else {
+              handStatusEl.textContent = 'Detectando...';
+            }
           }
 
           // Guarda de segurança para garantir que todos os pontos da palma existam
           if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-              return; // Pula este quadro se os dados estiverem incompletos
+              return;
           }
 
           // 1. Calcula o centro da palma para estabilidade
-          const p0 = landmarks[0];  // Pulso
-          const p5 = landmarks[5];  // Base do indicador
-          const p9 = landmarks[9];  // Base do meio
-          const p17 = landmarks[17]; // Base do mindinho
+          const p0 = landmarks[0];
+          const p5 = landmarks[5];
+          const p9 = landmarks[9];
+          const p17 = landmarks[17];
           let palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
-          // >> A INVERSÃO OCORRE AQUI <<
-          // Se for a mão direita, inverte a coordenada X.
-          if (handedness === 'Right') {
-            palmCenterX = 1 - palmCenterX;
+          // >> LÓGICA DE INVERSÃO CORRIGIDA <<
+          // O comportamento padrão (mão direita ou desconhecida) é usar a coordenada X diretamente.
+          // A inversão (1 - x) só é aplicada se for a mão ESQUERDA.
+          let targetX;
+          if (handedness === 'Left') {
+            targetX = window.innerWidth * (1 - palmCenterX);
+          } else {
+            // Para mão direita ou quando a lateralidade é desconhecida, use a coordenada invertida
+            // que funcionava para a mão direita anteriormente.
+            targetX = window.innerWidth * (1 - palmCenterX);
           }
-          
-          const targetX = window.innerWidth * palmCenterX; // O (1 - x) foi movido para a linha de cima
           const targetY = window.innerHeight * palmCenterY;
 
           // 2. Aplica suavização de movimento
