@@ -1132,32 +1132,30 @@ function showFailedFeedback() {
        }
        body { cursor: auto !important; }
 
-       /* Estilos para o novo painel da câmera */
-       #camera-feed-panel {
-         position: fixed;
-         bottom: 20px;
-         right: 20px;
-         height: 250px;
-         /* Largura para manter proporção 4:3 com 250px de altura */
-         width: 333px; 
-         z-index: 1000;
-         /* Herda .bp-matrix-panel (flex-direction: column) */
-       }
-       #camera-feed-content {
-         position: relative;
-         flex-grow: 1; /* Ocupa o espaço restante no painel */
-         overflow: hidden;
-         background: #000;
-       }
-       #camera-feed-content video,
-       #camera-feed-content canvas {
-         position: absolute !important;
-         top: 0 !important;
-         left: 0 !important;
-         width: 100% !important;
-         height: 100% !important;
-         object-fit: cover;
-       }
+       /* Posiciona a saída da webcam no canto inferior direito */
+      .handsfree-debugger {
+        position: fixed !important;
+        bottom: 20px !important;
+        right: 20px !important;
+        height: 200px !important;
+        width: auto !important;
+        max-width: 266px !important; /* 4:3 proporção aproximada */
+        z-index: 1000 !important;
+        border: 3px solid #eaff00;
+        border-radius: 6px;
+        background: #000;
+        overflow: hidden !important;
+      }
+
+      .handsfree-debugger video,
+      .handsfree-debugger canvas {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover;
+      }
 
       /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
       .handsfree-debugger,
@@ -1185,32 +1183,8 @@ function showFailedFeedback() {
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
  
-     // 3. Cria o novo painel para a câmera, com a mesma moldura do matrix-panel
-     const cameraPanel = document.createElement('div');
-     cameraPanel.id = 'camera-feed-panel';
-     cameraPanel.className = 'bp-matrix-panel'; // Reutiliza a classe existente para a moldura
-     cameraPanel.setAttribute('data-augmented-ui', 'br-clip border');
-     
-     const cameraHeader = document.createElement('div');
-     cameraHeader.className = 'panel-header'; // Reutiliza a classe do header
-     cameraHeader.textContent = 'CAMERA FEED';
-     
-     const cameraContent = document.createElement('div');
-     cameraContent.id = 'camera-feed-content';
-
-     cameraPanel.appendChild(cameraHeader);
-     cameraPanel.appendChild(cameraContent);
-     document.body.appendChild(cameraPanel);
-
-     // 4. Move o wrapper de debug inteiro para dentro do nosso painel quando tudo estiver pronto
-     handsfree.on('ready', () => {
-        const wrapper = document.querySelector('.handsfree-debugger');
-        const cameraContent = document.querySelector('#camera-feed-content');
-        if (wrapper && cameraContent && !cameraContent.contains(wrapper)) {
-            cameraContent.appendChild(wrapper);
-        }
-     });
-
+     // Não criamos mais um painel separado – a própria .handsfree-debugger já está posicionada via CSS.
+ 
      // 5. Botão para Habilitar/Desabilitar Handsfree
      const hacksPanel = document.querySelector('.bp-hacks-panel');
      const toggleBtn = document.createElement('div');
