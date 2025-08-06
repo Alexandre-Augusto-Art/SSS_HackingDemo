@@ -752,16 +752,14 @@
       margin: 24px 48px 0 48px;
     }
 
-    /* Primeira coluna: mini-feed com largura fixa igual à CODE MATRIX */
-    #mini-feed {
-      flex: 0 0 520px; /* mesma largura da matriz */
-      max-width: 520px;
-    }
+    /* Mini-feed largura 266px (4:3 para 200px alt) */
+    #mini-feed { flex: 0 0 266px; max-width:266px; }
 
-    /* Segunda coluna (toggle) ocupa o restante */
+    /* Toggle ao lado, largura automática */
     #handsfree-footer .toggle-container {
-      flex: 1;
+      flex: 0 0 auto;
       align-self: center;
+      margin-left: 32px;
     }
   </style>
 </head>
