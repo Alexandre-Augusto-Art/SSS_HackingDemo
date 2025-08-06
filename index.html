@@ -1192,16 +1192,17 @@ function showFailedFeedback() {
       const miniCanvas = document.createElement('canvas');
       miniCanvas.id = 'mini-canvas';
       miniFeed.appendChild(miniCanvas);
-      hacksPanel.appendChild(miniFeed);
+      hacksPanel.insertAdjacentElement('afterend', miniFeed);
 
       // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
-      handsfree.on('videoReady', () => {
-        const vid = document.querySelector('.handsfree-video');
+      handsfree.on('ready', () => {
+        const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
         if (vid && !miniFeed.contains(vid)) {
           // Remove atributos width/height fixos para permitir responsividade
           vid.removeAttribute('width');
           vid.removeAttribute('height');
           vid.style.display = 'block';
+          vid.style.visibility='visible';
           vid.style.position = 'absolute';
           vid.style.top = '0';
           vid.style.left = '0';
