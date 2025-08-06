@@ -792,6 +792,8 @@
       </div>
     </div>
   </div>
+  <!-- Handsfree Footer -->
+  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div><div class="toggle-container active"><div class="toggle-switch-visual"></div><span class="toggle-text">Handsfree ON</span></div></div>
   <div id="winMsg" class="hide win">ACCESS&nbsp;GRANTED</div>
   <div id="failMsg" class="hide failbox">ACCESS&nbsp;DENIED</div>
 <script>
@@ -1207,51 +1209,38 @@ function hideHandsfree(){
      // 2. Referência ao painel de hacks
      const hacksPanel = document.querySelector('.bp-hacks-panel');
 
-     // 2. Cria e anexa o elemento do cursor
+     // Referências aos elementos já existentes do footer
+     const miniFeed = document.getElementById('mini-feed');
+     const miniCanvas = document.getElementById('mini-canvas');
+     const footer = document.getElementById('handsfree-footer');
+
+     // 3. Cria e anexa o elemento do cursor
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
-
-      // 4. Cria o Mini-Feed da webcam
-      // Cria footer e miniFeed
-      const footer = document.createElement('div');
-      footer.id = 'handsfree-footer';
-
-      const miniFeed = document.createElement('div');
-      miniFeed.id = 'mini-feed';
-      const miniCanvas = document.createElement('canvas');
-      miniCanvas.id = 'mini-canvas';
-      miniFeed.appendChild(miniCanvas);
-      footer.appendChild(miniFeed);
-
-      // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
-      handsfree.on('ready', () => {
-        const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
-        if (vid && !miniFeed.contains(vid)) {
-          // Remove atributos width/height fixos para permitir responsividade
-          vid.removeAttribute('width');
-          vid.removeAttribute('height');
-          vid.style.display = 'block';
-          vid.style.visibility='visible';
-          vid.style.position = 'absolute';
-          vid.style.top = '0';
-          vid.style.left = '0';
-          vid.style.width = '100%';
-          vid.style.height = '100%';
-          vid.style.objectFit = 'cover';
-          miniFeed.insertBefore(vid, miniCanvas);
-        }
-      });
+ 
+     // 4. Cria o Mini-Feed da webcam
+     // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
+     handsfree.on('ready', () => {
+       const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
+       if (vid && !miniFeed.contains(vid)) {
+         // Remove atributos width/height fixos para permitir responsividade
+         vid.removeAttribute('width');
+         vid.removeAttribute('height');
+         vid.style.display = 'block';
+         vid.style.visibility='visible';
+         vid.style.position = 'absolute';
+         vid.style.top = '0';
+         vid.style.left = '0';
+         vid.style.width = '100%';
+         vid.style.height = '100%';
+         vid.style.objectFit = 'cover';
+         miniFeed.insertBefore(vid, miniCanvas);
+       }
+     });
  
      // 5. Botão para Habilitar/Desabilitar Handsfree
-     const toggleBtn = document.createElement('div');
-     toggleBtn.className = 'toggle-container active';
-     toggleBtn.innerHTML = `
-       <div class="toggle-switch-visual"></div>
-       <span class="toggle-text">Handsfree ON</span>
-     `;
-     // Insere o botão de toggle dentro do painel de hacks
-     hacksPanel.appendChild(toggleBtn);
+     const toggleBtn = document.querySelector('#handsfree-footer .toggle-container');
 
      // adiciona footer após bp-mainarea
      const mainarea = document.querySelector('.bp-mainarea');
