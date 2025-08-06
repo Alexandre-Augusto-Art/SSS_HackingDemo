@@ -1242,7 +1242,7 @@ function hideHandsfree(){
          vid.style.left = '0';
          vid.style.width = '100%';
          vid.style.height = '100%';
-         vid.style.objectFit = 'cover';
+         vid.style.objectFit = 'contain';
          miniFeed.insertBefore(vid, miniCanvas);
        }
      });
@@ -1279,7 +1279,13 @@ function hideHandsfree(){
      let cellWidth = 0;
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3;
+    const smoothingFactor = 0.3;
+
+    // --- ROI central para mapeamento da câmera ao Code Matrix ------------
+    const ROI = { xMin: 0.25, xMax: 0.75, yMin: 0.25, yMax: 0.75 };
+    function clamp(v, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, v));
+    }
 
       // Variáveis para clique sustentado
       let pinchStartTime = null; // timestamp quando começou a pinça
@@ -1368,14 +1374,18 @@ function hideHandsfree(){
       const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
       const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
-      // 2. Aplica a inversão correta baseada na mão
-      let targetX;
-      if (handLabel === 'Mão Direita') {
-        targetX = window.innerWidth * palmCenterX; // Movimento direto
-      } else {
-        targetX = window.innerWidth * (1 - palmCenterX); // Movimento invertido (para mão esquerda/desconhecida)
-      }
-      const targetY = window.innerHeight * palmCenterY;
+      // 2. Mapeia posição da palma para ROI central e depois para gridRect
+      let normX = (palmCenterX - ROI.xMin) / (ROI.xMax - ROI.xMin);
+      normX = clamp(normX);
+      let normY = (palmCenterY - ROI.yMin) / (ROI.yMax - ROI.yMin);
+      normY = clamp(normY);
+
+      // Inverte eixo X se não for mão direita
+      if (handLabel !== 'Mão Direita') normX = 1 - normX;
+
+      // Converte para coordenadas dentro do Code Matrix
+      const targetX = gridRect.left + normX * gridRect.width;
+      const targetY = gridRect.top  + normY * gridRect.height;
 
       // 3. Suavização e posicionamento do cursor
       const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
