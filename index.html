@@ -1273,14 +1273,6 @@ function hideHandsfree(){
      let lastCursorPos = { x: 0, y: 0 };
      const smoothingFactor = 0.3;
 
-      // Variáveis para clique sustentado
-      let pinchStartTime = null; // timestamp quando começou a pinça
-
-      function setCursorProgress(p){
-        // p entre 0 e 1 altera a opacidade de fundo do cursor
-        cursorEl.style.background = `rgba(0,255,255,${0.4*p})`;
-      }
-
       // === Função para desenhar landmarks no mini-canvas ===
       function drawLandmarks(landmarks) {
         const ctx = miniCanvas.getContext('2d');
@@ -1397,30 +1389,12 @@ function hideHandsfree(){
       }
       lastHoveredElement = currentElement;
 
-      // 5. Lógica de clique sustentado de 1s
-      const pinchState = hands.pinchState?.[0]?.[0]; // estado da pinça dedo indicador
-
-      if (pinchState === 'start') {
-        pinchStartTime = Date.now();
-        setCursorProgress(0);
-      }
-
-      if ((pinchState === 'held' || pinchState === 'start') && pinchStartTime) {
-        const elapsed = Date.now() - pinchStartTime;
-        const progress = Math.min(elapsed / 1000, 1);
-        setCursorProgress(progress);
-        if (progress === 1 && !pinchCooldown && currentElement) {
-          onPick(currentElement);
-          pinchCooldown = true;
-          setTimeout(() => { pinchCooldown = false; }, 750);
-          pinchStartTime = null;
-          setCursorProgress(0);
-        }
-      }
-
-      if (pinchState === 'released' || pinchState === undefined) {
-        pinchStartTime = null;
-        setCursorProgress(0);
+      // 5. Lógica de clique (verifica todos os pinchStates com optional chaining para segurança)
+      const isPinching = hands.pinchState?.some(state => state[0] === 'start');
+      if (isPinching && !pinchCooldown && currentElement) {
+        onPick(currentElement);
+        pinchCooldown = true;
+        setTimeout(() => { pinchCooldown = false; }, 750);
       }
     });
  
