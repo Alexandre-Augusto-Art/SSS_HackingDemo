@@ -1350,6 +1350,7 @@ function hideHandsfree(){
       // 1) procure a mão cujo centro da palma está dentro do ROI
       for (let i = 0; i < hands.landmarks.length; i++) {
         const lm = hands.landmarks[i];
+        if (!lm || !lm[0] || !lm[5] || !lm[9] || !lm[17]) continue;
         const cx = (lm[0].x + lm[5].x + lm[9].x + lm[17].x) / 4;
         const cy = (lm[0].y + lm[5].y + lm[9].y + lm[17].y) / 4;
         if (cx >= ROI.xMin && cx <= ROI.xMax && cy >= ROI.yMin && cy <= ROI.yMax) {
