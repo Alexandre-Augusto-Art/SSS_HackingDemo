@@ -1183,9 +1183,38 @@ function showFailedFeedback() {
      let gridRect = null;
      let cellWidth = 0;
      let cellHeight = 0;
-     let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3; // Mais perto de 0 = mais suave, mais lento. Mais perto de 1 = mais rápido, menos suave.
- 
+
+     // Implementação do Filtro One Euro
+     function LowPassFilter(alpha, initval = 0.0) {
+         let y = initval;
+         return (x) => {
+             y += alpha * (x - y);
+             return y;
+         };
+     }
+
+     function OneEuroFilter(minCutoff, beta, dCutoff = 1.0) {
+         const x = LowPassFilter(1.0, 0.0);
+         const dx = LowPassFilter(1.0, 0.0);
+         const t_prev = Date.now();
+
+         return (v) => {
+             const t = Date.now();
+             const te = t - t_prev;
+             t_prev = t;
+
+             const alpha_d = 1.0 / (1.0 + (2 * Math.PI * dCutoff * te) / 1000);
+             const dx_val = dx((v - x(v)) / te);
+             const fc = minCutoff + beta * Math.abs(dx_val);
+             const alpha = 1.0 / (1.0 + (2 * Math.PI * fc * te) / 1000);
+             return LowPassFilter(alpha, v)(v);
+         };
+     }
+     
+     // Inicializa os filtros para X e Y
+     const filterX = OneEuroFilter(0.005, 100);
+     const filterY = OneEuroFilter(0.005, 100);
+
      function isInsideMatrix(x, y) {
          if (!gridRect) return false;
          return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
@@ -1206,70 +1235,73 @@ function showFailedFeedback() {
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
 
-       // Determina qual mão usar (prioriza a direita, senão usa a primeira disponível)
-       let handIndex = 0;
-       if (hands?.handedness) {
-           const rightHandIndex = hands.handedness.findIndex(h => h === 'Right');
-           if (rightHandIndex > -1) {
-               handIndex = rightHandIndex;
-           }
-       }
-
-       if (hands?.landmarks?.[handIndex]) {
-           const landmarks = hands.landmarks[handIndex];
-           // Guarda de segurança para garantir que todos os pontos da palma existam
-           if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-               return; // Pula este quadro se os dados estiverem incompletos
-           }
-
-           // 1. Calcula o centro da palma para estabilidade
-           const p0 = landmarks[0];  // Pulso
-           const p5 = landmarks[5];  // Base do indicador
-           const p9 = landmarks[9];  // Base do meio
-           const p17 = landmarks[17]; // Base do mindinho
-           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-           const targetX = window.innerWidth * (1 - palmCenterX);
-           const targetY = window.innerHeight * palmCenterY;
-
-           // 2. Aplica suavização de movimento
-           const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
-           const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
-           lastCursorPos = { x: smoothedX, y: smoothedY };
-
-           cursorEl.style.left = `${smoothedX}px`;
-           cursorEl.style.top = `${smoothedY}px`;
-           cursorEl.style.display = 'block';
-           
-           // 3. Lógica de hover com posição suavizada
-           const isVisible = isInsideMatrix(smoothedX, smoothedY);
-           let currentElement = null;
-           if(isVisible) {
-               const relativeX = smoothedX - gridRect.left;
-               const relativeY = smoothedY - gridRect.top;
-               const col = Math.floor(relativeX / cellWidth);
-               const row = Math.floor(relativeY / cellHeight);
-               const gridEl = document.getElementById('grid');
-               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                   currentElement = gridEl.rows[row].cells[col];
+       if (hands?.landmarks) {
+           let handIndex = -1;
+           // Prioriza a mão direita
+           if (hands.handedness) {
+               const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
+               if (rightHandIndex !== -1) {
+                   handIndex = rightHandIndex;
+               } else if (hands.handedness.length > 0) {
+                   handIndex = 0; // Fallback para a primeira mão detectada se a direita não estiver presente
                }
            }
 
-           if (lastHoveredElement && lastHoveredElement !== currentElement) {
-               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-           }
-           if (currentElement && currentElement !== lastHoveredElement) {
-               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-           }
-           lastHoveredElement = currentElement;
+           if (handIndex !== -1) {
+               const landmarks = hands.landmarks[handIndex];
+               if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
+                   return;
+               }
 
-           // 4. Clique com Debounce de 750ms
-           if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               onPick(currentElement);
-               pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
-           }
+               // 1. Calcula o centro da palma para estabilidade
+               const p0 = landmarks[0];
+               const p5 = landmarks[5];
+               const p9 = landmarks[9];
+               const p17 = landmarks[17];
+               const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+               const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+               const targetX = window.innerWidth * (1 - palmCenterX);
+               const targetY = window.innerHeight * palmCenterY;
 
+               // 2. Aplica o Filtro One Euro
+               const smoothedX = filterX(targetX);
+               const smoothedY = filterY(targetY);
+
+               cursorEl.style.left = `${smoothedX}px`;
+               cursorEl.style.top = `${smoothedY}px`;
+               cursorEl.style.display = 'block';
+               
+               // 3. Lógica de hover com posição suavizada
+               const isVisible = isInsideMatrix(smoothedX, smoothedY);
+               let currentElement = null;
+               if(isVisible) {
+                   const relativeX = smoothedX - gridRect.left;
+                   const relativeY = smoothedY - gridRect.top;
+                   const col = Math.floor(relativeX / cellWidth);
+                   const row = Math.floor(relativeY / cellHeight);
+                   const gridEl = document.getElementById('grid');
+                   if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                       currentElement = gridEl.rows[row].cells[col];
+                   }
+               }
+
+               if (lastHoveredElement && lastHoveredElement !== currentElement) {
+                   lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+               }
+               if (currentElement && currentElement !== lastHoveredElement) {
+                   currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+               }
+               lastHoveredElement = currentElement;
+
+               // 4. Clique com Debounce de 750ms
+               if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
+                   onPick(currentElement);
+                   pinchCooldown = true;
+                   setTimeout(() => { pinchCooldown = false; }, 750);
+               }
+           } else {
+                cursorEl.style.display = 'none';
+           }
        } else {
            cursorEl.style.display = 'none';
        }
