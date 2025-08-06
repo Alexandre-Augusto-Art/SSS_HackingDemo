@@ -1244,68 +1244,56 @@ function showFailedFeedback() {
 
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
+       // console.log(hands); // Descomente esta linha para inspecionar os dados no console
 
-       if (hands?.landmarks && hands.handedness && hands.landmarks.length > 0) {
-            let handIndex = -1;
+       if (hands?.landmarks?.[0]) {
+            const landmarks = hands.landmarks[0]; // Usa sempre a primeira mão detectada
 
-            // Tenta encontrar a mão direita
-            const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
-            if (rightHandIndex !== -1 && hands.landmarks[rightHandIndex]) {
-                handIndex = rightHandIndex;
-            } else if (hands.landmarks[0]) { // Se não encontrar a direita, usa a primeira disponível
-                handIndex = 0;
-            }
+            if (landmarks && landmarks[0] && landmarks[5] && landmarks[9] && landmarks[17]) {
+                
+                const p0 = landmarks[0];
+                const p5 = landmarks[5];
+                const p9 = landmarks[9];
+                const p17 = landmarks[17];
+                const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+                const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+                const targetX = window.innerWidth * (1 - palmCenterX);
+                const targetY = window.innerHeight * palmCenterY;
 
-            if (handIndex !== -1) {
-                const landmarks = hands.landmarks[handIndex];
-                if (landmarks && landmarks[0] && landmarks[5] && landmarks[9] && landmarks[17]) {
-                    
-                    const p0 = landmarks[0];
-                    const p5 = landmarks[5];
-                    const p9 = landmarks[9];
-                    const p17 = landmarks[17];
-                    const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-                    const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-                    const targetX = window.innerWidth * (1 - palmCenterX);
-                    const targetY = window.innerHeight * palmCenterY;
+                // 2. Aplica o Filtro One Euro
+                const smoothedX = filterX(targetX);
+                const smoothedY = filterY(targetY);
 
-                    // 2. Aplica o Filtro One Euro
-                    const smoothedX = filterX(targetX);
-                    const smoothedY = filterY(targetY);
-
-                    cursorEl.style.left = `${smoothedX}px`;
-                    cursorEl.style.top = `${smoothedY}px`;
-                    cursorEl.style.display = 'block';
-                    
-                    const isVisible = isInsideMatrix(smoothedX, smoothedY);
-                    let currentElement = null;
-                    if(isVisible) {
-                        const relativeX = smoothedX - gridRect.left;
-                        const relativeY = smoothedY - gridRect.top;
-                        const col = Math.floor(relativeX / cellWidth);
-                        const row = Math.floor(relativeY / cellHeight);
-                        const gridEl = document.getElementById('grid');
-                        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                            currentElement = gridEl.rows[row].cells[col];
-                        }
-                    }
-
-                    if (lastHoveredElement && lastHoveredElement !== currentElement) {
-                        lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-                    }
-                    if (currentElement && currentElement !== lastHoveredElement) {
-                        currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-                    }
-                    lastHoveredElement = currentElement;
-
-                    if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
-                        onPick(currentElement);
-                        pinchCooldown = true;
-                        setTimeout(() => { pinchCooldown = false; }, 750);
+                cursorEl.style.left = `${smoothedX}px`;
+                cursorEl.style.top = `${smoothedY}px`;
+                cursorEl.style.display = 'block';
+                
+                const isVisible = isInsideMatrix(smoothedX, smoothedY);
+                let currentElement = null;
+                if(isVisible) {
+                    const relativeX = smoothedX - gridRect.left;
+                    const relativeY = smoothedY - gridRect.top;
+                    const col = Math.floor(relativeX / cellWidth);
+                    const row = Math.floor(relativeY / cellHeight);
+                    const gridEl = document.getElementById('grid');
+                    if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                        currentElement = gridEl.rows[row].cells[col];
                     }
                 }
-            } else {
-                 cursorEl.style.display = 'none';
+
+                if (lastHoveredElement && lastHoveredElement !== currentElement) {
+                    lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                }
+                if (currentElement && currentElement !== lastHoveredElement) {
+                    currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                }
+                lastHoveredElement = currentElement;
+
+                if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
+                    onPick(currentElement);
+                    pinchCooldown = true;
+                    setTimeout(() => { pinchCooldown = false; }, 750);
+                }
             }
         } else {
             if (cursorEl) cursorEl.style.display = 'none';
