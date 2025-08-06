@@ -1342,23 +1342,28 @@ function hideHandsfree(){
         return;
       }
 
-      // --- LÓGICA DE SELEÇÃO DE MÃO (Lida com Múltiplas Mãos) ---
+      // --- LÓGICA DE SELEÇÃO DE MÃO (múltiplas mãos) --------------------
       let handToUse = null;
       let handLabel = 'Detectando...';
+      let selectedIdx = -1;
 
-      // Procura pela mão direita primeiro
+      // 1) procure a mão cujo centro da palma está dentro do ROI
       for (let i = 0; i < hands.landmarks.length; i++) {
-        if (hands.handedness?.[i]?.label === 'Right') {
-          handToUse = hands.landmarks[i];
-          handLabel = 'Mão Direita';
-          break;
+        const lm = hands.landmarks[i];
+        const cx = (lm[0].x + lm[5].x + lm[9].x + lm[17].x) / 4;
+        const cy = (lm[0].y + lm[5].y + lm[9].y + lm[17].y) / 4;
+        if (cx >= ROI.xMin && cx <= ROI.xMax && cy >= ROI.yMin && cy <= ROI.yMax) {
+          selectedIdx = i; break;
         }
       }
 
-      // Se não encontrou a direita, usa a primeira mão disponível
-      if (!handToUse) {
+      // 2) se encontrou, usa essa; senão usa primeira mão detectada
+      if (selectedIdx !== -1) {
+        handToUse = hands.landmarks[selectedIdx];
+        handLabel = hands.handedness?.[selectedIdx]?.label || 'Detectando...';
+      } else {
         handToUse = hands.landmarks[0];
-        handLabel = hands.handedness?.[0]?.label === 'Left' ? 'Mão Esquerda' : 'Detectando...';
+        handLabel = hands.handedness?.[0]?.label || 'Detectando...';
       }
       
       // --- LÓGICA DO CURSOR (Usa a mão selecionada em "handToUse") ---
