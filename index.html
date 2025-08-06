@@ -1106,7 +1106,7 @@ function showFailedFeedback() {
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
      handsfree.enablePlugins('browser');
      handsfree.start()
  
@@ -1192,8 +1192,7 @@ function showFailedFeedback() {
       const miniCanvas = document.createElement('canvas');
       miniCanvas.id = 'mini-canvas';
       miniFeed.appendChild(miniCanvas);
-      // Insere logo abaixo do painel de hacks
-      hacksPanel.insertAdjacentElement('afterend', miniFeed);
+      hacksPanel.appendChild(miniFeed);
 
       // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
       handsfree.on('videoReady', () => {
@@ -1220,8 +1219,8 @@ function showFailedFeedback() {
        <div class="toggle-switch-visual"></div>
        <span class="toggle-text">Handsfree ON</span>
      `;
-     // Insere o botão de toggle depois do painel de hacks
-     hacksPanel.insertAdjacentElement('afterend', toggleBtn);
+     // Insere o botão de toggle dentro do painel de hacks
+     hacksPanel.appendChild(toggleBtn);
  
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
