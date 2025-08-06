@@ -1245,68 +1245,72 @@ function showFailedFeedback() {
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
 
-       if (hands?.landmarks && hands.landmarks.length > 0) {
-            // Lógica de seleção de mão simplificada
-            let handIndex = 0; // Padrão para a primeira mão
-            if (hands.landmarks.length > 1) {
-                // Heurística: assume que a mão mais à direita na tela é a mão direita do usuário
-                handIndex = hands.landmarks[0][0].x < hands.landmarks[1][0].x ? 0 : 1;
+       if (hands?.landmarks && hands.handedness && hands.landmarks.length > 0) {
+            let handIndex = -1;
+
+            // Tenta encontrar a mão direita
+            const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
+            if (rightHandIndex !== -1 && hands.landmarks[rightHandIndex]) {
+                handIndex = rightHandIndex;
+            } else if (hands.landmarks[0]) { // Se não encontrar a direita, usa a primeira disponível
+                handIndex = 0;
             }
 
-            const landmarks = hands.landmarks[handIndex];
-            if (!landmarks || !landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-                return;
-            }
-            
-            const p0 = landmarks[0];
-            const p5 = landmarks[5];
-            const p9 = landmarks[9];
-            const p17 = landmarks[17];
-            const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-            const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-            const targetX = window.innerWidth * (1 - palmCenterX);
-            const targetY = window.innerHeight * palmCenterY;
+            if (handIndex !== -1) {
+                const landmarks = hands.landmarks[handIndex];
+                if (landmarks && landmarks[0] && landmarks[5] && landmarks[9] && landmarks[17]) {
+                    
+                    const p0 = landmarks[0];
+                    const p5 = landmarks[5];
+                    const p9 = landmarks[9];
+                    const p17 = landmarks[17];
+                    const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+                    const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+                    const targetX = window.innerWidth * (1 - palmCenterX);
+                    const targetY = window.innerHeight * palmCenterY;
 
-            // 2. Aplica o Filtro One Euro
-            const smoothedX = filterX(targetX);
-            const smoothedY = filterY(targetY);
+                    // 2. Aplica o Filtro One Euro
+                    const smoothedX = filterX(targetX);
+                    const smoothedY = filterY(targetY);
 
-            cursorEl.style.left = `${smoothedX}px`;
-            cursorEl.style.top = `${smoothedY}px`;
-            cursorEl.style.display = 'block';
-            
-            // 3. Lógica de hover com posição suavizada
-            const isVisible = isInsideMatrix(smoothedX, smoothedY);
-            let currentElement = null;
-            if(isVisible) {
-                const relativeX = smoothedX - gridRect.left;
-                const relativeY = smoothedY - gridRect.top;
-                const col = Math.floor(relativeX / cellWidth);
-                const row = Math.floor(relativeY / cellHeight);
-                const gridEl = document.getElementById('grid');
-                if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                    currentElement = gridEl.rows[row].cells[col];
+                    cursorEl.style.left = `${smoothedX}px`;
+                    cursorEl.style.top = `${smoothedY}px`;
+                    cursorEl.style.display = 'block';
+                    
+                    const isVisible = isInsideMatrix(smoothedX, smoothedY);
+                    let currentElement = null;
+                    if(isVisible) {
+                        const relativeX = smoothedX - gridRect.left;
+                        const relativeY = smoothedY - gridRect.top;
+                        const col = Math.floor(relativeX / cellWidth);
+                        const row = Math.floor(relativeY / cellHeight);
+                        const gridEl = document.getElementById('grid');
+                        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                            currentElement = gridEl.rows[row].cells[col];
+                        }
+                    }
+
+                    if (lastHoveredElement && lastHoveredElement !== currentElement) {
+                        lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+                    }
+                    if (currentElement && currentElement !== lastHoveredElement) {
+                        currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                    }
+                    lastHoveredElement = currentElement;
+
+                    if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
+                        onPick(currentElement);
+                        pinchCooldown = true;
+                        setTimeout(() => { pinchCooldown = false; }, 750);
+                    }
                 }
+            } else {
+                 cursorEl.style.display = 'none';
             }
-
-            if (lastHoveredElement && lastHoveredElement !== currentElement) {
-                lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-            }
-            if (currentElement && currentElement !== lastHoveredElement) {
-                currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-            }
-            lastHoveredElement = currentElement;
-
-            // 4. Clique com Debounce de 750ms
-            if (hands.pinchState?.[handIndex]?.[0] === 'start' && !pinchCooldown && currentElement) {
-                onPick(currentElement);
-                pinchCooldown = true;
-                setTimeout(() => { pinchCooldown = false; }, 750);
-            }
-       } else {
-           cursorEl.style.display = 'none';
-       }
-     });
+        } else {
+            if (cursorEl) cursorEl.style.display = 'none';
+        }
+      });
  
      // Desativa plugins de scroll (se existirem)
      if(handsfree.plugin.pinchScroll) handsfree.plugin.pinchScroll.disable();
