@@ -704,7 +704,7 @@
     .toggle-container {
       display: flex;
       align-items: center;
-      background: #181c22;
+      background: #000000;
       border: 2px solid #eaff00;
       border-radius: 6px;
       margin: 0 24px 12px 24px;
@@ -743,6 +743,31 @@
     .toggle-container.active .toggle-switch-visual::before {
       left: 22px;
     }
+    /* Footer abaixo da bp-mainarea para webcam + toggle */
+    #handsfree-footer {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 32px;
+      margin: 24px 48px 0 48px;
+    }
+
+    /* Mini-feed largura 266px (4:3 para 200px alt) */
+    #mini-feed { flex: 0 0 266px; max-width:266px; }
+
+    /* Toggle ao lado, largura automática */
+    #handsfree-footer .toggle-container {
+      flex: 0 0 auto;
+      align-self: center;
+      margin-left: 32px;
+    }
+
+    /* Cantos retos para mini-feed, toggle e buffer boxes */
+    #mini-feed,
+    .toggle-container,
+    .bp-buffer-box {
+      border-radius: 0 !important;
+    }
   </style>
 </head>
 <body>
@@ -774,6 +799,8 @@
       </div>
     </div>
   </div>
+  <!-- Handsfree Footer -->
+  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div><div class="toggle-container active"><div class="toggle-switch-visual"></div><span class="toggle-text">Handsfree ON</span></div></div>
   <div id="winMsg" class="hide win">ACCESS&nbsp;GRANTED</div>
   <div id="failMsg" class="hide failbox">ACCESS&nbsp;DENIED</div>
 <script>
@@ -928,6 +955,8 @@ function validate(){
   } else {
     showFailedFeedback();
   }
+  // Esconde feed e pausa Handsfree
+  hideHandsfree();
 }
 
 /* === INÍCIO E UI HACKS ================================================== */
@@ -1100,78 +1129,144 @@ function showFailedFeedback() {
     document.body.appendChild(exitBtn);
   }
 }
+
+function hideHandsfree(){
+  if(window.handsfree){ handsfree.stop(); }
+  const foot=document.getElementById('handsfree-footer');
+  if(foot) foot.style.display='none';
+}
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
 <script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
-     handsfree.enablePlugins('browser'); // Reativado para obter `hands.pointer`
+     // showDebug: true agora irá mostrar a câmera e os pontos de referência
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
+     handsfree.enablePlugins('browser');
      handsfree.start()
  
-     // --- Criação de Elementos da Interface (Cursor, Debug) ---
+     // --- Criação de Elementos da Interface ---
  
-     // 1. Estilos para cursor e para ocultar vídeo
+     // 1. Estilos para cursor e para a nova mini-view da câmera
      const styleEl = document.createElement('style');
      styleEl.textContent = `
-       video.handsfree-video { display: none !important; }
        /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
        .handsfree-pointer { display: none !important; }
+
        #handsfree-cursor {
          position: fixed;
          width: 24px;
          height: 24px;
-         border: 2px solid #00ffff; /* Cor alterada para ciano */
+         border: 2px solid #00ffff;
          border-radius: 50%;
-         background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
+         background: rgba(0, 255, 255, 0.4);
          pointer-events: none;
          z-index: 10000;
          mix-blend-mode: difference;
          display: none; /* Inicia oculto */
        }
        body { cursor: auto !important; }
+
+       /* Esconde o debugger padrão do Handsfree */
+       .handsfree-debugger { display: none !important; }
+
+       /* Novo mini feed no canto inferior direito */
+       #mini-feed {
+         position: relative;
+         width: 100%;
+         max-width: 333px; /* largura máx similar ao painel */
+         height: 200px;
+         border: 3px solid #eaff00;
+         border-radius: 6px;
+         background: #000;
+         overflow: visible;                /* opcional: deixa aparecer as barras */
+       }
+
+       #mini-feed video,
+       #mini-feed canvas {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         object-fit: contain !important;   /* mostra o quadro completo  */
+         object-position: center center;   /* centraliza dentro do box */
+         transform: scaleX(-1);
+       }
+       /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
+       .handsfree-debugger,
+       .handsfree-debugger video,
+       .handsfree-debugger canvas {
+         max-height: 200px !important;
+         height: 100% !important;
+         width: auto !important;
+       }
+       /* Ajusta o wrapper original (.handsfree-debugger) para ocupar todo o painel */
+       .handsfree-debugger {
+         position: absolute !important;
+         top: 0 !important;
+         left: 0 !important;
+         width: 100% !important;
+         height: 100% !important;
+         border: none !important;
+         overflow: hidden !important;
+       }
      `;
      document.head.appendChild(styleEl);
  
-     // 2. Cria e anexa o elemento do cursor que estava faltando
+     // 2. Referência ao painel de hacks
+     const hacksPanel = document.querySelector('.bp-hacks-panel');
+
+     // Referências aos elementos já existentes do footer
+     const miniFeed = document.getElementById('mini-feed');
+     const miniCanvas = document.getElementById('mini-canvas');
+     const footer = document.getElementById('handsfree-footer');
+
+     // 3. Cria e anexa o elemento do cursor
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
  
-     // 3. Criação do painel de debug
-     const hacksPanel = document.querySelector('.bp-hacks-panel');
-     const dbgBox = document.createElement('div');
-     dbgBox.id = 'hfDebug';
-     dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
-     Object.assign(dbgBox.style, {
-       background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
-       fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px', // Margem ajustada para alinhar com o painel de hacks
-       border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
+     // 4. Cria o Mini-Feed da webcam
+     // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
+     handsfree.on('ready', () => {
+       const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
+       if (vid && !miniFeed.contains(vid)) {
+         // Remove atributos width/height fixos para permitir responsividade
+         vid.removeAttribute('width');
+         vid.removeAttribute('height');
+         vid.style.display = 'block';
+         vid.style.visibility='visible';
+         vid.style.position = 'absolute';
+         vid.style.top = '0';
+         vid.style.left = '0';
+         vid.style.width = '100%';
+         vid.style.height = '100%';
+         vid.style.objectFit = 'contain';
+         miniFeed.insertBefore(vid, miniCanvas);
+       }
      });
-     hacksPanel.insertAdjacentElement('afterend', dbgBox);
+ 
+     // 5. Botão para Habilitar/Desabilitar Handsfree
+     const toggleBtn = document.querySelector('#handsfree-footer .toggle-container');
 
-     // Botão para Habilitar/Desabilitar Handsfree
-     const toggleBtn = document.createElement('div');
-     toggleBtn.className = 'toggle-container active'; // Usando a nova classe
-     toggleBtn.innerHTML = `
-       <div class="toggle-switch-visual"></div>
-       <span class="toggle-text">Handsfree ON</span>
-     `;
-     dbgBox.insertAdjacentElement('afterend', toggleBtn);
-
+     // adiciona footer após bp-mainarea
+     const mainarea = document.querySelector('.bp-mainarea');
+     mainarea.insertAdjacentElement('afterend', footer);
+ 
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
        isHandsfreeEnabled = !isHandsfreeEnabled;
        toggleBtn.classList.toggle('active');
        const textEl = toggleBtn.querySelector('.toggle-text');
-
+ 
        if (isHandsfreeEnabled) {
-         handsfree.unpause(); // Alterado de start() para unpause()
+         handsfree.unpause();
          textEl.textContent = 'Handsfree ON';
        } else {
-         handsfree.pause(); // Alterado de stopMedia() para pause()
+         handsfree.pause();
          textEl.textContent = 'Handsfree OFF';
-         document.getElementById('handsfree-cursor').style.display = 'none'; // Esconde o cursor
+         document.getElementById('handsfree-cursor').style.display = 'none';
        }
      });
  
@@ -1184,12 +1279,47 @@ function showFailedFeedback() {
      let cellWidth = 0;
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3; // Mais perto de 0 = mais suave, mais lento. Mais perto de 1 = mais rápido, menos suave.
- 
-     function isInsideMatrix(x, y) {
-         if (!gridRect) return false;
-         return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
-     }
+    const smoothingFactor = 0.3;
+
+    // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
+    const ROI = { xMin: 0.70, xMax: 0.94, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
+    function clamp(v, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, v));
+    }
+
+
+
+      // Variáveis para clique sustentado
+      let pinchStartTime = null; // timestamp quando começou a pinça
+
+      function setCursorProgress(p){
+        // p: 0-1. Increase size and brightness for clearer feedback
+        const opacity = 0.2 + 0.8*p; // 0.2 to 1
+        cursorEl.style.background = `rgba(0,255,255,${opacity})`;
+        cursorEl.style.transform = 'translate(-50%,-50%)';
+      }
+
+      // === Função para desenhar landmarks no mini-canvas ===
+      function drawLandmarks(landmarks) {
+        const ctx = miniCanvas.getContext('2d');
+        const {width, height} = miniCanvas;
+        ctx.clearRect(0,0,width,height);
+        if (!landmarks) return;
+        ctx.fillStyle = '#00ffff';
+        landmarks.forEach(pt => {
+          const x = pt.x * width;
+          const y = pt.y * height;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI*2);
+          ctx.fill();
+        });
+      }
+
+      // Utilitário para verificar se o cursor está dentro da área da matriz
+      function isInsideMatrix(x, y) {
+        if (!gridRect) return false;
+        return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
+      }
  
      setTimeout(() => {
          const gridEl = document.getElementById('grid');
@@ -1203,68 +1333,118 @@ function showFailedFeedback() {
          }
      }, 500);
 
-     handsfree.use('minimalController', ({ hands }) => {
-       const cursorEl = document.getElementById('handsfree-cursor');
+    handsfree.use('minimalController', ({ hands }) => {
+      const cursorEl = document.getElementById('handsfree-cursor');
 
-       if (hands?.landmarks?.[0]) {
-           const landmarks = hands.landmarks[0];
-           // Guarda de segurança para garantir que todos os pontos da palma existam
-           if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-               return; // Pula este quadro se os dados estiverem incompletos
-           }
+      // Se nenhuma mão for detectada, esconde o cursor e sai.
+      if (!hands.landmarks || hands.landmarks.length === 0) {
+        cursorEl.style.display = 'none';
+        return;
+      }
 
-           // 1. Calcula o centro da palma para estabilidade
-           const p0 = landmarks[0];  // Pulso
-           const p5 = landmarks[5];  // Base do indicador
-           const p9 = landmarks[9];  // Base do meio
-           const p17 = landmarks[17]; // Base do mindinho
-           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-           const targetX = window.innerWidth * (1 - palmCenterX);
-           const targetY = window.innerHeight * palmCenterY;
+      // --- LÓGICA DE SELEÇÃO DE MÃO (Lida com Múltiplas Mãos) ---
+      let handToUse = null;
+      let handLabel = 'Detectando...';
 
-           // 2. Aplica suavização de movimento
-           const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
-           const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
-           lastCursorPos = { x: smoothedX, y: smoothedY };
+      // Procura pela mão direita primeiro
+      for (let i = 0; i < hands.landmarks.length; i++) {
+        if (hands.handedness?.[i]?.label === 'Right') {
+          handToUse = hands.landmarks[i];
+          handLabel = 'Mão Direita';
+          break;
+        }
+      }
 
-           cursorEl.style.left = `${smoothedX}px`;
-           cursorEl.style.top = `${smoothedY}px`;
-           cursorEl.style.display = 'block';
-           
-           // 3. Lógica de hover com posição suavizada
-           const isVisible = isInsideMatrix(smoothedX, smoothedY);
-           let currentElement = null;
-           if(isVisible) {
-               const relativeX = smoothedX - gridRect.left;
-               const relativeY = smoothedY - gridRect.top;
-               const col = Math.floor(relativeX / cellWidth);
-               const row = Math.floor(relativeY / cellHeight);
-               const gridEl = document.getElementById('grid');
-               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                   currentElement = gridEl.rows[row].cells[col];
-               }
-           }
+      // Se não encontrou a direita, usa a primeira mão disponível
+      if (!handToUse) {
+        handToUse = hands.landmarks[0];
+        handLabel = hands.handedness?.[0]?.label === 'Left' ? 'Mão Esquerda' : 'Detectando...';
+      }
+      
+      // --- LÓGICA DO CURSOR (Usa a mão selecionada em "handToUse") ---
 
-           if (lastHoveredElement && lastHoveredElement !== currentElement) {
-               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-           }
-           if (currentElement && currentElement !== lastHoveredElement) {
-               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-           }
-           lastHoveredElement = currentElement;
+      if (!handToUse[0] || !handToUse[5] || !handToUse[9] || !handToUse[17]) {
+        drawLandmarks(null);
+        return;
+      }
 
-           // 4. Clique com Debounce de 750ms
-           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               onPick(currentElement);
-               pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
-           }
+      // Desenha landmarks no mini-canvas
+      drawLandmarks(handToUse);
 
-       } else {
-           cursorEl.style.display = 'none';
-       }
-     });
+      // 1. Calcula o centro da palma
+      const p0 = handToUse[0], p5 = handToUse[5], p9 = handToUse[9], p17 = handToUse[17];
+      const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+      const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+
+      // 2. Mapeia posição da palma para ROI central e depois para gridRect
+      let normX = (palmCenterX - ROI.xMin) / (ROI.xMax - ROI.xMin);
+      normX = clamp(normX);
+      let normY = (palmCenterY - ROI.yMin) / (ROI.yMax - ROI.yMin);
+      normY = clamp(normY);
+
+      // Inverte eixo X se não for mão direita
+      if (handLabel !== 'Mão Direita') normX = 1 - normX;
+
+      // Converte para coordenadas dentro do Code Matrix
+      const targetX = gridRect.left + normX * gridRect.width;
+      const targetY = gridRect.top  + normY * gridRect.height;
+
+      // 3. Suavização e posicionamento do cursor
+      const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
+      const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
+      lastCursorPos = { x: smoothedX, y: smoothedY };
+
+      cursorEl.style.left = `${smoothedX}px`;
+      cursorEl.style.top = `${smoothedY}px`;
+      cursorEl.style.display = 'block';
+
+      // 4. Lógica de hover
+      const isVisible = isInsideMatrix(smoothedX, smoothedY);
+      let currentElement = null;
+      if (isVisible) {
+        const relativeX = smoothedX - gridRect.left;
+        const relativeY = smoothedY - gridRect.top;
+        const col = Math.floor(relativeX / cellWidth);
+        const row = Math.floor(relativeY / cellHeight);
+        const gridEl = document.getElementById('grid');
+        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+          currentElement = gridEl.rows[row].cells[col];
+        }
+      }
+      if (lastHoveredElement && lastHoveredElement !== currentElement) {
+        lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      }
+      if (currentElement && currentElement !== lastHoveredElement) {
+        currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      }
+      lastHoveredElement = currentElement;
+
+      // 5. Lógica de clique sustentado de 1s
+      const pinchState = hands.pinchState?.[0]?.[0]; // estado da pinça dedo indicador
+
+      if (pinchState === 'start') {
+        pinchStartTime = Date.now();
+        setCursorProgress(0);
+      }
+
+      if ((pinchState === 'held' || pinchState === 'start') && pinchStartTime) {
+        const elapsed = Date.now() - pinchStartTime;
+        const progress = Math.min(elapsed / 300, 1);
+        setCursorProgress(progress);
+        if (progress === 1 && !pinchCooldown && currentElement) {
+          onPick(currentElement);
+          pinchCooldown = true;
+          setTimeout(() => { pinchCooldown = false; }, 750);
+          pinchStartTime = null;
+          setCursorProgress(0);
+        }
+      }
+
+      if (pinchState === 'released' || pinchState === undefined) {
+        pinchStartTime = null;
+        setCursorProgress(0);
+      }
+    });
  
      // Desativa plugins de scroll (se existirem)
      if(handsfree.plugin.pinchScroll) handsfree.plugin.pinchScroll.disable();
