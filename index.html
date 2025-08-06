@@ -1201,7 +1201,7 @@ function showFailedFeedback() {
           handLandmarks = hands.landmarks[0];
         }
 
-        if (!handLandmarks) {
+        if (!handLandmarks || handLandmarks.length < 21) {
           cursorEl.style.display = 'none';
           return;
         }
