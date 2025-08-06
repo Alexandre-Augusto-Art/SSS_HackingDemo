@@ -1160,7 +1160,13 @@ function showFailedFeedback() {
        }
        /* Escondemos o wrapper original, pois moveremos seu conteúdo */
        #handsfree-debug-wrapper {
-         display: none !important;
+         position: absolute !important;
+         top: 0 !important;
+         left: 0 !important;
+         width: 100% !important;
+         height: 100% !important;
+         border: none !important;
+         overflow: hidden !important;
        }
      `;
      document.head.appendChild(styleEl);
@@ -1187,18 +1193,12 @@ function showFailedFeedback() {
      cameraPanel.appendChild(cameraContent);
      document.body.appendChild(cameraPanel);
 
-     // 4. Lógica para mover o vídeo da câmera para nosso novo painel
-     // Usamos o evento 'ready' para garantir que os elementos do Handsfree existam
+     // 4. Move o wrapper de debug inteiro para dentro do nosso painel quando tudo estiver pronto
      handsfree.on('ready', () => {
-        const handsfreeWrapper = document.querySelector('#handsfree-debug-wrapper');
+        const wrapper = document.querySelector('#handsfree-debug-wrapper');
         const cameraContent = document.querySelector('#camera-feed-content');
-        if (handsfreeWrapper && cameraContent) {
-            const video = handsfreeWrapper.querySelector('video');
-            const canvas = handsfreeWrapper.querySelector('canvas');
-            if (video && canvas) {
-                cameraContent.appendChild(video);
-                cameraContent.appendChild(canvas);
-            }
+        if (wrapper && cameraContent && !cameraContent.contains(wrapper)) {
+            cameraContent.appendChild(wrapper);
         }
      });
 
