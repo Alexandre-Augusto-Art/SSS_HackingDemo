@@ -1225,92 +1225,98 @@ function showFailedFeedback() {
       const cursorEl = document.getElementById('handsfree-cursor');
       const handStatusEl = document.getElementById('handStatus');
 
-      // Modificação: Apenas checa por landmarks para garantir que o cursor sempre apareça se uma mão for detectada.
-      if (hands?.landmarks?.[0]) {
-          const landmarks = hands.landmarks[0];
-          // A verificação de handedness é movida para dentro, e não bloqueia a renderização.
-          const handedness = hands?.handedness?.[0]; 
+      // Se nenhuma mão for detectada, esconde tudo e sai.
+      if (!hands.landmarks || hands.landmarks.length === 0) {
+        cursorEl.style.display = 'none';
+        if (handStatusEl) {
+          handStatusEl.textContent = 'Nenhuma mão';
+        }
+        return;
+      }
 
-          // Atualiza o indicador de status da mão
-          if (handStatusEl) {
-            if (handedness === 'Right') {
-              handStatusEl.textContent = 'Mão Direita';
-            } else if (handedness === 'Left') {
-              handStatusEl.textContent = 'Mão Esquerda';
-            } else {
-              handStatusEl.textContent = 'Detectando...';
-            }
-          }
+      // --- LÓGICA DE SELEÇÃO DE MÃO (Lida com Múltiplas Mãos) ---
+      let handToUse = null;
+      let handLabel = 'Detectando...';
 
-          // Guarda de segurança para garantir que todos os pontos da palma existam
-          if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-              return;
-          }
+      // Procura pela mão direita primeiro, pois é a principal para o controle
+      for (let i = 0; i < hands.landmarks.length; i++) {
+        if (hands.handedness?.[i]?.label === 'Right') {
+          handToUse = hands.landmarks[i];
+          handLabel = 'Mão Direita';
+          break; // Encontrou a mão direita, pode parar de procurar
+        }
+      }
 
-          // 1. Calcula o centro da palma para estabilidade
-          const p0 = landmarks[0];
-          const p5 = landmarks[5];
-          const p9 = landmarks[9];
-          const p17 = landmarks[17];
-          let palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-          const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
+      // Se não encontrou a mão direita, usa a primeira mão que encontrar (provavelmente a esquerda)
+      if (!handToUse) {
+        handToUse = hands.landmarks[0];
+        handLabel = hands.handedness?.[0]?.label === 'Left' ? 'Mão Esquerda' : 'Detectando...';
+      }
+      
+      // Atualiza o status na tela
+      if (handStatusEl) {
+        handStatusEl.textContent = handLabel;
+      }
 
-          // >> LÓGICA DE INVERSÃO CORRIGIDA <<
-          // O comportamento padrão (mão direita ou desconhecida) é usar a coordenada X diretamente.
-          // A inversão (1 - x) só é aplicada se for a mão ESQUERDA.
-          let targetX;
-          if (handedness === 'Left') {
-            targetX = window.innerWidth * (1 - palmCenterX);
-          } else {
-            // Para mão direita ou quando a lateralidade é desconhecida, use a coordenada invertida
-            // que funcionava para a mão direita anteriormente.
-            targetX = window.innerWidth * (1 - palmCenterX);
-          }
-          const targetY = window.innerHeight * palmCenterY;
+      // --- LÓGICA DO CURSOR (Usa a mão selecionada em "handToUse") ---
 
-          // 2. Aplica suavização de movimento
-          const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
-          const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
-          lastCursorPos = { x: smoothedX, y: smoothedY };
+      // Guarda de segurança para os pontos da palma
+      if (!handToUse[0] || !handToUse[5] || !handToUse[9] || !handToUse[17]) {
+        return;
+      }
 
-          cursorEl.style.left = `${smoothedX}px`;
-          cursorEl.style.top = `${smoothedY}px`;
-          cursorEl.style.display = 'block';
-          
-          // 3. Lógica de hover com posição suavizada
-          const isVisible = isInsideMatrix(smoothedX, smoothedY);
-          let currentElement = null;
-          if(isVisible) {
-              const relativeX = smoothedX - gridRect.left;
-              const relativeY = smoothedY - gridRect.top;
-              const col = Math.floor(relativeX / cellWidth);
-              const row = Math.floor(relativeY / cellHeight);
-              const gridEl = document.getElementById('grid');
-              if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                  currentElement = gridEl.rows[row].cells[col];
-              }
-          }
+      // 1. Calcula o centro da palma
+      const p0 = handToUse[0], p5 = handToUse[5], p9 = handToUse[9], p17 = handToUse[17];
+      const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+      const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
-          if (lastHoveredElement && lastHoveredElement !== currentElement) {
-              lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-          }
-          if (currentElement && currentElement !== lastHoveredElement) {
-              currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-          }
-          lastHoveredElement = currentElement;
-
-          // 4. Clique com Debounce de 750ms
-          if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-              onPick(currentElement);
-              pinchCooldown = true;
-              setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
-          }
-
+      // 2. Aplica a inversão correta baseada na mão
+      // A lógica original (1 - x) era a "invertida", que funcionava para a esquerda.
+      // A lógica direta (x) é a "correta" para a direita.
+      let targetX;
+      if (handLabel === 'Mão Direita') {
+        targetX = window.innerWidth * palmCenterX; // Movimento direto
       } else {
-          cursorEl.style.display = 'none';
-          if (handStatusEl) {
-            handStatusEl.textContent = 'Nenhuma mão'; // Atualiza o status quando não há mão
-          }
+        targetX = window.innerWidth * (1 - palmCenterX); // Movimento invertido (original)
+      }
+      const targetY = window.innerHeight * palmCenterY;
+
+      // 3. Suavização e posicionamento do cursor
+      const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
+      const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
+      lastCursorPos = { x: smoothedX, y: smoothedY };
+
+      cursorEl.style.left = `${smoothedX}px`;
+      cursorEl.style.top = `${smoothedY}px`;
+      cursorEl.style.display = 'block';
+
+      // 4. Lógica de hover
+      const isVisible = isInsideMatrix(smoothedX, smoothedY);
+      let currentElement = null;
+      if (isVisible) {
+        const relativeX = smoothedX - gridRect.left;
+        const relativeY = smoothedY - gridRect.top;
+        const col = Math.floor(relativeX / cellWidth);
+        const row = Math.floor(relativeY / cellHeight);
+        const gridEl = document.getElementById('grid');
+        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+          currentElement = gridEl.rows[row].cells[col];
+        }
+      }
+      if (lastHoveredElement && lastHoveredElement !== currentElement) {
+        lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+      }
+      if (currentElement && currentElement !== lastHoveredElement) {
+        currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+      }
+      lastHoveredElement = currentElement;
+
+      // 5. Lógica de clique (agora verifica todos os pinchStates)
+      const isPinching = hands.pinchState.some(state => state[0] === 'start');
+      if (isPinching && !pinchCooldown && currentElement) {
+        onPick(currentElement);
+        pinchCooldown = true;
+        setTimeout(() => { pinchCooldown = false; }, 750);
       }
     });
  
