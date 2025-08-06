@@ -1220,47 +1220,54 @@ function showFailedFeedback() {
          }
      }, 500);
 
-     handsfree.use('finalController', ({ hands }) => {
+     handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
+       const dbgXYEl = document.getElementById('dbgXY');
+       const dbgPinchEl = document.getElementById('dbgPinch');
 
-       if (typeof hands?.pointer?.x === 'number') {
-           const x = window.innerWidth - hands.pointer.x; // Espelha a coordenada X do ponteiro nativo
-           const y = hands.pointer.y;
-
-           cursorEl.style.left = `${x}px`;
-           cursorEl.style.top = `${y}px`;
-           cursorEl.style.display = 'block';
-           
-           const isVisible = isInsideMatrix(x, y);
-           cursorEl.style.display = isVisible ? 'block' : 'none';
-
-           let currentElement = null;
-           if(isVisible) {
-               const relativeX = x - gridRect.left;
-               const relativeY = y - gridRect.top;
-               const col = Math.floor(relativeX / cellWidth);
-               const row = Math.floor(relativeY / cellHeight);
-               const gridEl = document.getElementById('grid');
-               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                   currentElement = gridEl.rows[row].cells[col];
-               }
-           }
-
-           if (lastHoveredElement && lastHoveredElement !== currentElement) {
-               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-           }
-           if (currentElement && currentElement !== lastHoveredElement) {
-               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-           }
-           lastHoveredElement = currentElement;
-
-           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               onPick(currentElement);
-               pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 750);
-           }
-       } else {
+       // Guarda de segurança: só executa se o ponteiro e o estado da pinça existirem
+       if (typeof hands?.pointer?.x !== 'number' || typeof hands?.pointer?.y !== 'number' || !hands?.pinchState?.[0]) {
            if (cursorEl) cursorEl.style.display = 'none';
+           return;
+       }
+
+       const { x, y } = hands.pointer;
+       const targetX = window.innerWidth - x; // Espelha a coordenada X do ponteiro nativo
+       const targetY = y;
+       
+       // 1. Atualiza a posição do cursor ciano
+       cursorEl.style.left = `${targetX}px`;
+       cursorEl.style.top = `${targetY}px`;
+       cursorEl.style.display = 'block';
+
+       // 2. Atualiza o painel de debug
+       if(dbgXYEl) dbgXYEl.innerText = `X: ${targetX.toFixed(0)}, Y: ${targetY.toFixed(0)}`;
+       if(dbgPinchEl) dbgPinchEl.innerText = `Pinch: ${hands.pinchState?.[0]?.[0]}`;
+
+       let currentElement = null;
+       if(isVisible) {
+           const relativeX = x - gridRect.left;
+           const relativeY = y - gridRect.top;
+           const col = Math.floor(relativeX / cellWidth);
+           const row = Math.floor(relativeY / cellHeight);
+           const gridEl = document.getElementById('grid');
+           if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+               currentElement = gridEl.rows[row].cells[col];
+           }
+       }
+
+       if (lastHoveredElement && lastHoveredElement !== currentElement) {
+           lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+       }
+       if (currentElement && currentElement !== lastHoveredElement) {
+           currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+       }
+       lastHoveredElement = currentElement;
+
+       if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
+           onPick(currentElement);
+           pinchCooldown = true;
+           setTimeout(() => { pinchCooldown = false; }, 750);
        }
      });
  
