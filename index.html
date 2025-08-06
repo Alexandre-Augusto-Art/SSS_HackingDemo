@@ -1167,8 +1167,8 @@ function showFailedFeedback() {
         height: 100% !important;
         width: auto !important;
       }
-       /* Escondemos o wrapper original, pois moveremos seu conteúdo */
-       #handsfree-debug-wrapper {
+       /* Ajusta o wrapper original (.handsfree-debugger) para ocupar todo o painel */
+       .handsfree-debugger {
          position: absolute !important;
          top: 0 !important;
          left: 0 !important;
@@ -1204,7 +1204,7 @@ function showFailedFeedback() {
 
      // 4. Move o wrapper de debug inteiro para dentro do nosso painel quando tudo estiver pronto
      handsfree.on('ready', () => {
-        const wrapper = document.querySelector('#handsfree-debug-wrapper');
+        const wrapper = document.querySelector('.handsfree-debugger');
         const cameraContent = document.querySelector('#camera-feed-content');
         if (wrapper && cameraContent && !cameraContent.contains(wrapper)) {
             cameraContent.appendChild(wrapper);
