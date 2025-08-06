@@ -743,6 +743,16 @@
     .toggle-container.active .toggle-switch-visual::before {
       left: 22px;
     }
+    /* Footer abaixo da bp-mainarea para webcam + toggle */
+    #handsfree-footer {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 24px;
+      margin: 24px 48px 0 48px;
+    }
+
+    #handsfree-footer .toggle-container { margin:0; }
   </style>
 </head>
 <body>
@@ -1187,12 +1197,16 @@ function showFailedFeedback() {
      document.body.appendChild(cursorEl);
 
       // 4. Cria o Mini-Feed da webcam
+      // Cria footer e miniFeed
+      const footer = document.createElement('div');
+      footer.id = 'handsfree-footer';
+
       const miniFeed = document.createElement('div');
       miniFeed.id = 'mini-feed';
       const miniCanvas = document.createElement('canvas');
       miniCanvas.id = 'mini-canvas';
       miniFeed.appendChild(miniCanvas);
-      hacksPanel.insertAdjacentElement('afterend', miniFeed);
+      footer.appendChild(miniFeed);
 
       // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
       handsfree.on('ready', () => {
@@ -1222,6 +1236,10 @@ function showFailedFeedback() {
      `;
      // Insere o botão de toggle dentro do painel de hacks
      hacksPanel.appendChild(toggleBtn);
+
+     // adiciona footer após bp-mainarea
+     const mainarea = document.querySelector('.bp-mainarea');
+     mainarea.insertAdjacentElement('afterend', footer);
  
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
