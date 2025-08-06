@@ -1117,9 +1117,10 @@ function showFailedFeedback() {
      // 1. Estilos para cursor e para ocultar vídeo
      const styleEl = document.createElement('style');
      styleEl.textContent = `
-       video.handsfree-video { display: none !important; }
-       /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
-       .handsfree-pointer { display: none !important; }
+       video.handsfree-video { 
+           display: none !important;
+           /* transform: scaleX(-1); // Espelhamento de vídeo removido */
+       }
        #handsfree-cursor {
          position: fixed;
          width: 24px;
@@ -1250,7 +1251,10 @@ function showFailedFeedback() {
        // console.log(hands); // Descomente esta linha para inspecionar os dados no console
 
        if (hands?.landmarks?.[0]) {
-            const landmarks = hands.landmarks[0]; // Usa sempre a primeira mão detectada
+            // 1. Espelhamento dos Dados da Mão para Normalização
+            const mirroredLandmarks = hands.landmarks[0].map(p => ({ x: 1.0 - p.x, y: p.y, z: p.z }));
+
+            const landmarks = mirroredLandmarks;
 
             if (landmarks && landmarks[0] && landmarks[5] && landmarks[9] && landmarks[17]) {
                 
@@ -1260,10 +1264,10 @@ function showFailedFeedback() {
                 const p17 = landmarks[17];
                 const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
                 const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-                const targetX = window.innerWidth * (1 - palmCenterX);
+                const targetX = window.innerWidth * palmCenterX; // Inversão (1 - x) removida
                 const targetY = window.innerHeight * palmCenterY;
 
-                // 2. Aplica o Filtro One Euro
+                // 2. Aplica suavização de movimento
                 const smoothedX = filterX(targetX);
                 const smoothedY = filterY(targetY);
 
