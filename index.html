@@ -1194,7 +1194,7 @@ function showFailedFeedback() {
         }
 
         let handLandmarks;
-        if (hands.landmarks.length > 1 && hands.handedness.length > 1) {
+        if (hands.landmarks.length > 1 && hands.handedness && hands.handedness.length > 1) {
           const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
           handLandmarks = hands.landmarks[rightHandIndex > -1 ? rightHandIndex : 0];
         } else {
