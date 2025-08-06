@@ -1281,11 +1281,28 @@ function hideHandsfree(){
      let lastCursorPos = { x: 0, y: 0 };
     const smoothingFactor = 0.3;
 
-    // --- ROI central para mapeamento da câmera ao Code Matrix ------------
-    const ROI = { xMin: 0.25, xMax: 0.75, yMin: 0.25, yMax: 0.75 };
+    // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
+    const ROI = { xMin: 0.08, xMax: 0.58, yMin: 0.30, yMax: 0.65 }; // corresponde ao retângulo vermelho
     function clamp(v, min = 0, max = 1) {
       return Math.max(min, Math.min(max, v));
     }
+
+    // Preview visual da ROI – desenha o retângulo em tela (remova se não precisar)
+    const roiPreview = document.createElement('div');
+    roiPreview.style.position = 'fixed';
+    roiPreview.style.border = '2px dashed red';
+    roiPreview.style.pointerEvents = 'none';
+    roiPreview.style.zIndex = '10001';
+    document.body.appendChild(roiPreview);
+    function updateRoiPreview(){
+      const vw = window.innerWidth, vh = window.innerHeight;
+      roiPreview.style.left   = (ROI.xMin*vw)+'px';
+      roiPreview.style.top    = (ROI.yMin*vh)+'px';
+      roiPreview.style.width  = ((ROI.xMax-ROI.xMin)*vw)+'px';
+      roiPreview.style.height = ((ROI.yMax-ROI.yMin)*vh)+'px';
+    }
+    updateRoiPreview();
+    window.addEventListener('resize', updateRoiPreview);
 
       // Variáveis para clique sustentado
       let pinchStartTime = null; // timestamp quando começou a pinça
