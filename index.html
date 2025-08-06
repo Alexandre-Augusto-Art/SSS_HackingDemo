@@ -1179,8 +1179,7 @@ function hideHandsfree(){
          border: 3px solid #eaff00;
          border-radius: 6px;
          background: #000;
-         overflow: hidden;
-         margin-top: 24px; /* espaço abaixo do painel */
+         overflow: visible;                /* opcional: deixa aparecer as barras */
        }
 
        #mini-feed video,
@@ -1190,7 +1189,8 @@ function hideHandsfree(){
          left: 0;
          width: 100%;
          height: 100%;
-         object-fit: cover;
+         object-fit: contain !important;   /* mostra o quadro completo  */
+         object-position: center center;   /* centraliza dentro do box */
          transform: scaleX(-1);
        }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
