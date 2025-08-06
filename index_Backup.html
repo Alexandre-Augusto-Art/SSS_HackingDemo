@@ -743,6 +743,24 @@
     .toggle-container.active .toggle-switch-visual::before {
       left: 22px;
     }
+    video.handsfree-video {
+        transform: scaleX(-1);
+    }
+    /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
+    .handsfree-pointer { display: none !important; }
+    #handsfree-cursor {
+      position: fixed;
+      width: 24px;
+      height: 24px;
+      border: 2px solid #00ffff; /* Cor alterada para ciano */
+      border-radius: 50%;
+      background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
+      pointer-events: none;
+      z-index: 10000;
+      mix-blend-mode: difference;
+      display: none; /* Inicia oculto */
+    }
+    body { cursor: auto !important; }
   </style>
 </head>
 <body>
@@ -1104,177 +1122,133 @@ function showFailedFeedback() {
 <!-- Handsfree.js – Hand-tracking cursor integration -->
 <script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
-  window.addEventListener('DOMContentLoaded', () => {
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
-     handsfree.enablePlugins('browser'); // Reativado para obter `hands.pointer`
-     handsfree.start()
- 
-     // --- Criação de Elementos da Interface (Cursor, Debug) ---
- 
-     // 1. Estilos para cursor e para ocultar vídeo
-     const styleEl = document.createElement('style');
-     styleEl.textContent = `
-       video.handsfree-video { display: none !important; }
-       /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
-       .handsfree-pointer { display: none !important; }
-       #handsfree-cursor {
-         position: fixed;
-         width: 24px;
-         height: 24px;
-         border: 2px solid #00ffff; /* Cor alterada para ciano */
-         border-radius: 50%;
-         background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
-         pointer-events: none;
-         z-index: 10000;
-         mix-blend-mode: difference;
-         display: none; /* Inicia oculto */
-       }
-       body { cursor: auto !important; }
-     `;
-     document.head.appendChild(styleEl);
- 
-     // 2. Cria e anexa o elemento do cursor que estava faltando
-     const cursorEl = document.createElement('div');
-     cursorEl.id = 'handsfree-cursor';
-     document.body.appendChild(cursorEl);
- 
-     // 3. Criação do painel de debug
-     const hacksPanel = document.querySelector('.bp-hacks-panel');
-     const dbgBox = document.createElement('div');
-     dbgBox.id = 'hfDebug';
-     dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
-     Object.assign(dbgBox.style, {
-       background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
-       fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px', // Margem ajustada para alinhar com o painel de hacks
-       border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
-     });
-     hacksPanel.insertAdjacentElement('afterend', dbgBox);
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Configuração limpa, focada apenas no essencial.
+      const handsfree = new Handsfree({
+        hands: {
+          enabled: true,
+          maxNumHands: 2,
+          detectionConfidence: 0.8,
+          trackingConfidence: 0.5
+        }
+      });
+      handsfree.start();
 
-     // Botão para Habilitar/Desabilitar Handsfree
-     const toggleBtn = document.createElement('div');
-     toggleBtn.className = 'toggle-container active'; // Usando a nova classe
-     toggleBtn.innerHTML = `
-       <div class="toggle-switch-visual"></div>
-       <span class="toggle-text">Handsfree ON</span>
-     `;
-     dbgBox.insertAdjacentElement('afterend', toggleBtn);
+      // --- Criação de Elementos da Interface ---
+      const cursorEl = document.createElement('div');
+      cursorEl.id = 'handsfree-cursor';
+      document.body.appendChild(cursorEl);
 
-     let isHandsfreeEnabled = true;
-     toggleBtn.addEventListener('click', () => {
-       isHandsfreeEnabled = !isHandsfreeEnabled;
-       toggleBtn.classList.toggle('active');
-       const textEl = toggleBtn.querySelector('.toggle-text');
+      const hacksPanel = document.querySelector('.bp-hacks-panel');
+      const dbgBox = document.createElement('div');
+      dbgBox.id = 'hfDebug';
+      dbgBox.innerHTML = `<div id="dbgXY">X: -- Y: --</div><div id="dbgPinch">Pinch: --</div>`;
+      Object.assign(dbgBox.style, {
+        background: '#181c22', color: '#eaff00', fontFamily: "'ChakraPetch', monospace",
+        fontSize: '0.9em', padding: '10px 16px', margin: '12px 24px',
+        border: '2px solid #eaff00', borderRadius: '6px', width: '180px'
+      });
+      if(hacksPanel) hacksPanel.insertAdjacentElement('afterend', dbgBox);
+      
+      const toggleContainer = document.createElement('div');
+      toggleContainer.className = 'toggle-container active';
+      toggleContainer.innerHTML = `
+        <div class="toggle-switch-visual"></div>
+        <span class="toggle-text">Handsfree ON</span>
+      `;
+      dbgBox.insertAdjacentElement('afterend', toggleContainer);
+      
+      let isHandsfreeEnabled = true;
+      toggleContainer.addEventListener('click', () => {
+        isHandsfreeEnabled = !isHandsfreeEnabled;
+        toggleContainer.classList.toggle('active');
+        const textEl = toggleContainer.querySelector('.toggle-text');
+        if (isHandsfreeEnabled) {
+          handsfree.unpause();
+          textEl.textContent = 'Handsfree ON';
+        } else {
+          handsfree.pause();
+          textEl.textContent = 'Handsfree OFF';
+          cursorEl.style.display = 'none';
+        }
+      });
 
-       if (isHandsfreeEnabled) {
-         handsfree.unpause(); // Alterado de start() para unpause()
-         textEl.textContent = 'Handsfree ON';
-       } else {
-         handsfree.pause(); // Alterado de stopMedia() para pause()
-         textEl.textContent = 'Handsfree OFF';
-         document.getElementById('handsfree-cursor').style.display = 'none'; // Esconde o cursor
-       }
-     });
- 
-     // --- LÓGICA DE CONTROLE UNIFICADA E FINAL ---
- 
-     // Variáveis de estado
-     let lastHoveredElement = null;
-     let pinchCooldown = false;
-     let gridRect = null;
-     let cellWidth = 0;
-     let cellHeight = 0;
-     let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3; // Mais perto de 0 = mais suave, mais lento. Mais perto de 1 = mais rápido, menos suave.
- 
-     function isInsideMatrix(x, y) {
-         if (!gridRect) return false;
-         return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
-     }
- 
-     setTimeout(() => {
-         const gridEl = document.getElementById('grid');
-         if (gridEl) {
-             gridRect = gridEl.getBoundingClientRect();
-             if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
-                 const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
-                 cellWidth = cellRect.width;
-                 cellHeight = cellRect.height;
-             }
-         }
-     }, 500);
+      // --- Lógica de Controle Principal ---
+      let lastHoveredElement = null;
+      let pinchCooldown = false;
+      let gridRect = null;
+      
+      function updateGridRect() {
+        const gridEl = document.getElementById('grid');
+        if (gridEl) gridRect = gridEl.getBoundingClientRect();
+      }
+      setTimeout(updateGridRect, 500);
+      window.addEventListener('resize', updateGridRect);
 
-     handsfree.use('minimalController', ({ hands }) => {
-       const cursorEl = document.getElementById('handsfree-cursor');
+      handsfree.use('minimalController', ({ hands }) => {
+        if (!isHandsfreeEnabled) return;
 
-       if (hands?.landmarks?.[0]) {
-           const landmarks = hands.landmarks[0];
-           // Guarda de segurança para garantir que todos os pontos da palma existam
-           if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
-               return; // Pula este quadro se os dados estiverem incompletos
-           }
+        if (!hands || !hands.landmarks || hands.landmarks.length === 0) {
+          cursorEl.style.display = 'none';
+          return;
+        }
 
-           // 1. Calcula o centro da palma para estabilidade
-           const p0 = landmarks[0];  // Pulso
-           const p5 = landmarks[5];  // Base do indicador
-           const p9 = landmarks[9];  // Base do meio
-           const p17 = landmarks[17]; // Base do mindinho
-           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-           const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-           const targetX = window.innerWidth * (1 - palmCenterX);
-           const targetY = window.innerHeight * palmCenterY;
+        let handLandmarks;
+        if (hands.landmarks.length > 1 && hands.handedness && hands.handedness.length > 1) {
+          const rightHandIndex = hands.handedness.findIndex(h => h.label === 'Right');
+          handLandmarks = hands.landmarks[rightHandIndex > -1 ? rightHandIndex : 0];
+        } else {
+          handLandmarks = hands.landmarks[0];
+        }
 
-           // 2. Aplica suavização de movimento
-           const smoothedX = lastCursorPos.x * (1 - smoothingFactor) + targetX * smoothingFactor;
-           const smoothedY = lastCursorPos.y * (1 - smoothingFactor) + targetY * smoothingFactor;
-           lastCursorPos = { x: smoothedX, y: smoothedY };
+        if (!handLandmarks || handLandmarks.length < 21) {
+          cursorEl.style.display = 'none';
+          return;
+        }
 
-           cursorEl.style.left = `${smoothedX}px`;
-           cursorEl.style.top = `${smoothedY}px`;
-           cursorEl.style.display = 'block';
-           
-           // 3. Lógica de hover com posição suavizada
-           const isVisible = isInsideMatrix(smoothedX, smoothedY);
-           let currentElement = null;
-           if(isVisible) {
-               const relativeX = smoothedX - gridRect.left;
-               const relativeY = smoothedY - gridRect.top;
-               const col = Math.floor(relativeX / cellWidth);
-               const row = Math.floor(relativeY / cellHeight);
-               const gridEl = document.getElementById('grid');
-               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                   currentElement = gridEl.rows[row].cells[col];
-               }
-           }
+        const palmBase = handLandmarks[0];
+        const mirroredX = 1.0 - palmBase.x;
+        const targetX = mirroredX * window.innerWidth;
+        const targetY = palmBase.y * window.innerHeight;
 
-           if (lastHoveredElement && lastHoveredElement !== currentElement) {
-               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-           }
-           if (currentElement && currentElement !== lastHoveredElement) {
-               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-           }
-           lastHoveredElement = currentElement;
+        cursorEl.style.left = `${targetX}px`;
+        cursorEl.style.top = `${targetY}px`;
+        cursorEl.style.display = 'block';
 
-           // 4. Clique com Debounce de 750ms
-           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-               onPick(currentElement);
-               pinchCooldown = true;
-               setTimeout(() => { pinchCooldown = false; }, 750); // Cooldown aumentado para 750ms
-           }
+        if (dbgBox) {
+          dbgBox.querySelector('#dbgXY').innerText = `X: ${targetX.toFixed(0)}, Y: ${targetY.toFixed(0)}`;
+        }
+        
+        const thumbTip = handLandmarks[4];
+        const indexTip = handLandmarks[8];
+        const distance = Math.sqrt(Math.pow(thumbTip.x - indexTip.x, 2) + Math.pow(thumbTip.y - indexTip.y, 2));
+        const isPinching = distance < 0.07;
 
-       } else {
-           cursorEl.style.display = 'none';
-       }
-     });
- 
-     // Desativa plugins de scroll (se existirem)
-     if(handsfree.plugin.pinchScroll) handsfree.plugin.pinchScroll.disable();
- 
-     // Desativa plugins de scroll (se existirem, o que não deve acontecer)
-    handsfree.on('deviceError', err => {
-      alert('Não foi possível acessar a câmera. Verifique permissões de site e conexão HTTPS.')
-      console.error(err)
-    })
-  })
-</script>
+        if (dbgBox) {
+            dbgBox.querySelector('#dbgPinch').innerText = `Pinch: ${isPinching ? 'CLICK' : '...'}`;
+        }
+        
+        const targetElement = document.elementFromPoint(targetX, targetY);
+        let currentElement = null;
+        if (targetElement && targetElement.classList.contains('bp-matrix-cell-content')) {
+          currentElement = targetElement;
+        }
+        
+        if (lastHoveredElement && lastHoveredElement !== currentElement) {
+          lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+        }
+        if (currentElement && currentElement !== lastHoveredElement) {
+          currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+        }
+        lastHoveredElement = currentElement;
+
+        if (isPinching && !pinchCooldown && currentElement) {
+          onPick(currentElement);
+          pinchCooldown = true;
+          setTimeout(() => { pinchCooldown = false; }, 750);
+        }
+      });
+    });
+  </script>
 </body>
 </html>
