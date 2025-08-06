@@ -1289,28 +1289,27 @@ const ROI_HEIGHT = 0.32;
       return Math.max(min, Math.min(max, v));
     }
 
-    // Atualiza ROI dinamicamente baseado no ombro direito
-    handsfree.use('roiFromShoulder', ({ pose }) => {
-      if (!pose || !pose.landmarks || pose.landmarks.length === 0) return;
-      const rightShoulder = pose.landmarks[12]; // 12 = ombro direito em MediaPipe
-      if (!rightShoulder) return;
-      const sx = rightShoulder.x;
-      const sy = rightShoulder.y;
+    // Atualiza ROI dinamicamente com base no ombro direito (landmark 12)
+    handsfree.use('roiFromShoulder', data => {
+      const landmarks = data.pose?.landmarks || data.poseLandmarks;
+      if (!landmarks || !landmarks[12]) return;
+      const sx = landmarks[12].x;
+      const sy = landmarks[12].y;
 
-      // ROI à direita do ombro
-      let left = sx + 0.05;           // 5% à direita do ombro
-      let right = left + ROI_WIDTH;
-      if (right > 1) { right = 1; left = right - ROI_WIDTH; }
+      const OFFSET = 0.05; // 5% após o ombro
+      let left = sx + OFFSET;
+      // Mantém ROI dentro do quadro
+      if (left + ROI_WIDTH > 1) left = 1 - ROI_WIDTH;
+      if (left < 0) left = 0;
 
       let top = sy - ROI_HEIGHT / 2;
-      let bottom = top + ROI_HEIGHT;
-      if (top < 0) { top = 0; bottom = ROI_HEIGHT; }
-      if (bottom > 1) { bottom = 1; top = 1 - ROI_HEIGHT; }
+      if (top < 0) top = 0;
+      if (top + ROI_HEIGHT > 1) top = 1 - ROI_HEIGHT;
 
       ROI.xMin = left;
-      ROI.xMax = right;
+      ROI.xMax = left + ROI_WIDTH;
       ROI.yMin = top;
-      ROI.yMax = bottom;
+      ROI.yMax = top + ROI_HEIGHT;
     });
 
 
