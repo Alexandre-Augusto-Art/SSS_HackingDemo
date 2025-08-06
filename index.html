@@ -1280,8 +1280,7 @@ function hideHandsfree(){
         // p: 0-1. Increase size and brightness for clearer feedback
         const opacity = 0.2 + 0.8*p; // 0.2 to 1
         cursorEl.style.background = `rgba(0,255,255,${opacity})`;
-        const scale = 1 + 0.4 * p; // up to 1.4x size
-        cursorEl.style.transform = `translate(-50%,-50%) scale(${scale})`;
+        cursorEl.style.transform = 'translate(-50%,-50%)';
       }
 
       // === Função para desenhar landmarks no mini-canvas ===
@@ -1410,7 +1409,7 @@ function hideHandsfree(){
 
       if ((pinchState === 'held' || pinchState === 'start') && pinchStartTime) {
         const elapsed = Date.now() - pinchStartTime;
-        const progress = Math.min(elapsed / 500, 1);
+        const progress = Math.min(elapsed / 300, 1);
         setCursorProgress(progress);
         if (progress === 1 && !pinchCooldown && currentElement) {
           onPick(currentElement);
