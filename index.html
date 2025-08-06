@@ -1105,31 +1105,55 @@ function showFailedFeedback() {
 <script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
-     handsfree.enablePlugins('browser'); // Reativado para obter `hands.pointer`
+     // showDebug: true agora irá mostrar a câmera e os pontos de referência
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
+     handsfree.enablePlugins('browser');
      handsfree.start()
  
-     // --- Criação de Elementos da Interface (Cursor, Debug) ---
+     // --- Criação de Elementos da Interface ---
  
-     // 1. Estilos para cursor e para ocultar vídeo
+     // 1. Estilos para cursor e para a nova mini-view da câmera
      const styleEl = document.createElement('style');
      styleEl.textContent = `
-       video.handsfree-video { display: none !important; }
        /* Oculta o cursor padrão do plugin "browser" para usar o nosso */
        .handsfree-pointer { display: none !important; }
+
        #handsfree-cursor {
          position: fixed;
          width: 24px;
          height: 24px;
-         border: 2px solid #00ffff; /* Cor alterada para ciano */
+         border: 2px solid #00ffff;
          border-radius: 50%;
-         background: rgba(0, 255, 255, 0.4); /* Cor alterada para ciano */
+         background: rgba(0, 255, 255, 0.4);
          pointer-events: none;
          z-index: 10000;
          mix-blend-mode: difference;
          display: none; /* Inicia oculto */
        }
        body { cursor: auto !important; }
+
+       /* Estilos para a mini-view da câmera com os pontos de referência */
+       #handsfree-debug-wrapper {
+         position: fixed;
+         bottom: 20px;
+         right: 20px;
+         width: 240px;
+         height: 180px;
+         border: 3px solid #eaff00;
+         border-radius: 6px;
+         overflow: hidden;
+         z-index: 1000;
+       }
+       #handsfree-debug-wrapper video,
+       #handsfree-debug-wrapper canvas {
+         width: 100% !important;
+         height: 100% !important;
+         display: block !important;
+         position: absolute !important;
+         top: 0 !important;
+         left: 0 !important;
+         object-fit: cover;
+       }
      `;
      document.head.appendChild(styleEl);
  
@@ -1138,58 +1162,30 @@ function showFailedFeedback() {
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
  
-     // 3. Criação do painel de debug
+     // 3. Botão para Habilitar/Desabilitar Handsfree
      const hacksPanel = document.querySelector('.bp-hacks-panel');
-     const dbgBox = document.createElement('div');
-     dbgBox.id = 'hfDebug';
-     dbgBox.innerHTML = `<div id="dbgXY">X: --&nbsp; Y: --</div><div id="dbgPinch">Pinch: --</div>`;
-     Object.assign(dbgBox.style, {
-       background:'#181c22',color:'#eaff00',fontFamily:"'ChakraPetch',monospace",
-       fontSize:'0.9em',padding:'10px 16px',margin:'12px 24px', // Margem ajustada para alinhar com o painel de hacks
-       border:'2px solid #eaff00',borderRadius:'6px',width:'180px'
-     });
-     hacksPanel.insertAdjacentElement('afterend', dbgBox);
-
-     // Botão para Habilitar/Desabilitar Handsfree
      const toggleBtn = document.createElement('div');
-     toggleBtn.className = 'toggle-container active'; // Usando a nova classe
+     toggleBtn.className = 'toggle-container active';
      toggleBtn.innerHTML = `
        <div class="toggle-switch-visual"></div>
        <span class="toggle-text">Handsfree ON</span>
      `;
-     dbgBox.insertAdjacentElement('afterend', toggleBtn);
-
-     // Criação do Indicador de Mão
-     const handStatusIndicator = document.createElement('div');
-     handStatusIndicator.id = 'handStatus';
-     handStatusIndicator.textContent = 'Aguardando mão...';
-     Object.assign(handStatusIndicator.style, {
-       background: '#181c22',
-       color: '#eaff00',
-       fontFamily: "'ChakraPetch', monospace",
-       fontSize: '0.9em',
-       padding: '10px 16px',
-       margin: '0 24px 12px 24px',
-       border: '2px solid #eaff00',
-       borderRadius: '6px',
-       width: '180px',
-       textAlign: 'center'
-     });
-     toggleBtn.insertAdjacentElement('afterend', handStatusIndicator);
-
+     // Insere o botão de toggle depois do painel de hacks
+     hacksPanel.insertAdjacentElement('afterend', toggleBtn);
+ 
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
        isHandsfreeEnabled = !isHandsfreeEnabled;
        toggleBtn.classList.toggle('active');
        const textEl = toggleBtn.querySelector('.toggle-text');
-
+ 
        if (isHandsfreeEnabled) {
-         handsfree.unpause(); // Alterado de start() para unpause()
+         handsfree.unpause();
          textEl.textContent = 'Handsfree ON';
        } else {
-         handsfree.pause(); // Alterado de stopMedia() para pause()
+         handsfree.pause();
          textEl.textContent = 'Handsfree OFF';
-         document.getElementById('handsfree-cursor').style.display = 'none'; // Esconde o cursor
+         document.getElementById('handsfree-cursor').style.display = 'none';
        }
      });
  
@@ -1202,7 +1198,7 @@ function showFailedFeedback() {
      let cellWidth = 0;
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3; // Mais perto de 0 = mais suave, mais lento. Mais perto de 1 = mais rápido, menos suave.
+     const smoothingFactor = 0.3;
  
      function isInsideMatrix(x, y) {
          if (!gridRect) return false;
@@ -1223,14 +1219,10 @@ function showFailedFeedback() {
 
     handsfree.use('minimalController', ({ hands }) => {
       const cursorEl = document.getElementById('handsfree-cursor');
-      const handStatusEl = document.getElementById('handStatus');
 
-      // Se nenhuma mão for detectada, esconde tudo e sai.
+      // Se nenhuma mão for detectada, esconde o cursor e sai.
       if (!hands.landmarks || hands.landmarks.length === 0) {
         cursorEl.style.display = 'none';
-        if (handStatusEl) {
-          handStatusEl.textContent = 'Nenhuma mão';
-        }
         return;
       }
 
@@ -1238,29 +1230,23 @@ function showFailedFeedback() {
       let handToUse = null;
       let handLabel = 'Detectando...';
 
-      // Procura pela mão direita primeiro, pois é a principal para o controle
+      // Procura pela mão direita primeiro
       for (let i = 0; i < hands.landmarks.length; i++) {
         if (hands.handedness?.[i]?.label === 'Right') {
           handToUse = hands.landmarks[i];
           handLabel = 'Mão Direita';
-          break; // Encontrou a mão direita, pode parar de procurar
+          break;
         }
       }
 
-      // Se não encontrou a mão direita, usa a primeira mão que encontrar (provavelmente a esquerda)
+      // Se não encontrou a direita, usa a primeira mão disponível
       if (!handToUse) {
         handToUse = hands.landmarks[0];
         handLabel = hands.handedness?.[0]?.label === 'Left' ? 'Mão Esquerda' : 'Detectando...';
       }
       
-      // Atualiza o status na tela
-      if (handStatusEl) {
-        handStatusEl.textContent = handLabel;
-      }
-
       // --- LÓGICA DO CURSOR (Usa a mão selecionada em "handToUse") ---
 
-      // Guarda de segurança para os pontos da palma
       if (!handToUse[0] || !handToUse[5] || !handToUse[9] || !handToUse[17]) {
         return;
       }
@@ -1271,13 +1257,11 @@ function showFailedFeedback() {
       const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
       // 2. Aplica a inversão correta baseada na mão
-      // A lógica original (1 - x) era a "invertida", que funcionava para a esquerda.
-      // A lógica direta (x) é a "correta" para a direita.
       let targetX;
       if (handLabel === 'Mão Direita') {
         targetX = window.innerWidth * palmCenterX; // Movimento direto
       } else {
-        targetX = window.innerWidth * (1 - palmCenterX); // Movimento invertido (original)
+        targetX = window.innerWidth * (1 - palmCenterX); // Movimento invertido (para mão esquerda/desconhecida)
       }
       const targetY = window.innerHeight * palmCenterY;
 
@@ -1311,7 +1295,7 @@ function showFailedFeedback() {
       }
       lastHoveredElement = currentElement;
 
-      // 5. Lógica de clique (agora verifica todos os pinchStates)
+      // 5. Lógica de clique (verifica todos os pinchStates)
       const isPinching = hands.pinchState.some(state => state[0] === 'start');
       if (isPinching && !pinchCooldown && currentElement) {
         onPick(currentElement);
