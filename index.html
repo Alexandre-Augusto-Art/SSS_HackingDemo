@@ -1137,17 +1137,11 @@ function hideHandsfree(){
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
-<script src="https://cdn.jsdelivr.net/npm/handsfree@8.5.1/build/lib/handsfree.js"></script>
+<script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
-     const handsfree = new Handsfree({
-      hands: true,
-      pose: true,
-      useGestures: true,
-      showDebug: true,
-      assetsPath: 'https://cdn.jsdelivr.net/npm/handsfree@8.5.1/build/lib/assets'
-    })
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
      handsfree.enablePlugins('browser');
      handsfree.start()
  
@@ -1288,52 +1282,10 @@ function hideHandsfree(){
     const smoothingFactor = 0.3;
 
     // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
-    let ROI = { xMin: 0.70, xMax: 0.94, yMin: 0.40, yMax: 0.72 }; // ROI inicial; será atualizado dinamicamente
-const ROI_WIDTH  = 0.24; // proporção do quadro
-const ROI_HEIGHT = 0.32;
+    const ROI = { xMin: 0.65, xMax: 0.89, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
     function clamp(v, min = 0, max = 1) {
       return Math.max(min, Math.min(max, v));
     }
-
-    // Atualiza ROI dinamicamente com base no ombro direito (landmark 12)
-    handsfree.use('roiFromShoulder', data => {
-      const landmarks = data.pose?.landmarks || data.poseLandmarks;
-      if (!landmarks || (!landmarks[12] && !landmarks[11])) return;
-
-      // Use ombro mais à ESQUERDA (menor X) para colocar ROI "para fora" do corpo
-      const rightShoulder = landmarks[12]; // ombro direito
-      const leftShoulder  = landmarks[11]; // ombro esquerdo
-      const shoulder = (leftShoulder && rightShoulder)
-        ? (leftShoulder.x < rightShoulder.x ? leftShoulder : rightShoulder)
-        : (leftShoulder || rightShoulder);
-
-      const sx = shoulder.x;
-      const sy = shoulder.y;
-
-      const OFFSET = 0.02;               // pequena folga do ombro
-      // Se ombro está à esquerda, ROI cresce para a esquerda; se à direita, cresce para a direita
-      let xMin, xMax;
-      if (sx < 0.5) {
-        // ombro esquerdo (na imagem), ROI fica à esquerda do ombro
-        xMax = Math.max(sx - OFFSET, ROI_WIDTH);
-        xMin = xMax - ROI_WIDTH;
-      } else {
-        // ombro direito, ROI à direita
-        xMin = Math.min(sx + OFFSET, 1 - ROI_WIDTH);
-        xMax = xMin + ROI_WIDTH;
-      }
-
-      // Eixo Y: centralizado no ombro
-      let top = sy - ROI_HEIGHT / 2;
-      if (top < 0) top = 0;
-      if (top + ROI_HEIGHT > 1) top = 1 - ROI_HEIGHT;
-      const bottom = top + ROI_HEIGHT;
-
-      ROI.xMin = xMin;
-      ROI.xMax = xMax;
-      ROI.yMin = top;
-      ROI.yMax = bottom;
-    });
 
 
 
