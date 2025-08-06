@@ -1158,6 +1158,15 @@ function showFailedFeedback() {
          height: 100% !important;
          object-fit: cover;
        }
+
+      /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
+      .handsfree-debugger,
+      .handsfree-debugger video,
+      .handsfree-debugger canvas {
+        max-height: 200px !important;
+        height: 100% !important;
+        width: auto !important;
+      }
        /* Escondemos o wrapper original, pois moveremos seu conteúdo */
        #handsfree-debug-wrapper {
          position: absolute !important;
