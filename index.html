@@ -1159,6 +1159,24 @@ function showFailedFeedback() {
      `;
      dbgBox.insertAdjacentElement('afterend', toggleBtn);
 
+     // Criação do Indicador de Mão
+     const handStatusIndicator = document.createElement('div');
+     handStatusIndicator.id = 'handStatus';
+     handStatusIndicator.textContent = 'Aguardando mão...';
+     Object.assign(handStatusIndicator.style, {
+       background: '#181c22',
+       color: '#eaff00',
+       fontFamily: "'ChakraPetch', monospace",
+       fontSize: '0.9em',
+       padding: '10px 16px',
+       margin: '0 24px 12px 24px',
+       border: '2px solid #eaff00',
+       borderRadius: '6px',
+       width: '180px',
+       textAlign: 'center'
+     });
+     toggleBtn.insertAdjacentElement('afterend', handStatusIndicator);
+
      let isHandsfreeEnabled = true;
      toggleBtn.addEventListener('click', () => {
        isHandsfreeEnabled = !isHandsfreeEnabled;
@@ -1205,9 +1223,19 @@ function showFailedFeedback() {
 
      handsfree.use('minimalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
+       const handStatusEl = document.getElementById('handStatus'); // Pega o novo elemento
 
        if (hands?.landmarks?.[0]) {
            const landmarks = hands.landmarks[0];
+           const handedness = hands.handedness[0]; // Pega a informação de lateralidade
+
+           // Atualiza o indicador de status da mão
+           if (handedness === 'Right') {
+             handStatusEl.textContent = 'Mão Direita';
+           } else if (handedness === 'Left') {
+             handStatusEl.textContent = 'Mão Esquerda';
+           }
+
            // Guarda de segurança para garantir que todos os pontos da palma existam
            if (!landmarks[0] || !landmarks[5] || !landmarks[9] || !landmarks[17]) {
                return; // Pula este quadro se os dados estiverem incompletos
@@ -1218,9 +1246,16 @@ function showFailedFeedback() {
            const p5 = landmarks[5];  // Base do indicador
            const p9 = landmarks[9];  // Base do meio
            const p17 = landmarks[17]; // Base do mindinho
-           const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
+           let palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
            const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-           const targetX = window.innerWidth * (1 - palmCenterX);
+
+           // >> A INVERSÃO OCORRE AQUI <<
+           // Se for a mão direita, inverte a coordenada X.
+           if (handedness === 'Right') {
+             palmCenterX = 1 - palmCenterX;
+           }
+           
+           const targetX = window.innerWidth * palmCenterX; // O (1 - x) foi movido para a linha acima
            const targetY = window.innerHeight * palmCenterY;
 
            // 2. Aplica suavização de movimento
@@ -1263,6 +1298,7 @@ function showFailedFeedback() {
 
        } else {
            cursorEl.style.display = 'none';
+           handStatusEl.textContent = 'Nenhuma mão'; // Atualiza o status quando não há mão
        }
      });
  
