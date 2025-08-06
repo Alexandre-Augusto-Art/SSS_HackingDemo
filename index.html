@@ -1106,7 +1106,7 @@ function showFailedFeedback() {
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
+     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
      handsfree.enablePlugins('browser');
      handsfree.start()
  
@@ -1132,41 +1132,40 @@ function showFailedFeedback() {
        }
        body { cursor: auto !important; }
 
-       /* Posiciona a saída da webcam no canto inferior direito */
-      .handsfree-debugger {
-        position: fixed !important;
-        top: auto !important;
-        left: auto !important;
-        bottom: 20px !important;
-        right: 20px !important;
-        height: 200px !important;
-        width: auto !important;
-        max-width: 266px !important; /* 4:3 proporção aproximada */
-        z-index: 1000 !important;
-        border: 3px solid #eaff00;
-        border-radius: 6px;
-        background: #000;
-        overflow: hidden !important;
-      }
+       /* Esconde o debugger padrão do Handsfree */
+       .handsfree-debugger { display: none !important; }
 
-      .handsfree-debugger video,
-      .handsfree-debugger canvas {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100% !important;
-        height: 100% !important;
-        object-fit: cover;
-      }
+       /* Novo mini feed no canto inferior direito */
+       #mini-feed {
+         position: fixed;
+         bottom: 20px;
+         right: 20px;
+         width: 266px; /* 4:3 proporção para altura 200px */
+         height: 200px;
+         border: 3px solid #eaff00;
+         border-radius: 6px;
+         background: #000;
+         overflow: hidden;
+         z-index: 1000;
+       }
 
-      /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
-      .handsfree-debugger,
-      .handsfree-debugger video,
-      .handsfree-debugger canvas {
-        max-height: 200px !important;
-        height: 100% !important;
-        width: auto !important;
-      }
+       #mini-feed video,
+       #mini-feed canvas {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         object-fit: cover;
+       }
+       /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
+       .handsfree-debugger,
+       .handsfree-debugger video,
+       .handsfree-debugger canvas {
+         max-height: 200px !important;
+         height: 100% !important;
+         width: auto !important;
+       }
        /* Ajusta o wrapper original (.handsfree-debugger) para ocupar todo o painel */
        .handsfree-debugger {
          position: absolute !important;
@@ -1184,8 +1183,25 @@ function showFailedFeedback() {
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
- 
-     // Não criamos mais um painel separado – a própria .handsfree-debugger já está posicionada via CSS.
+
+      // 3. Cria o Mini-Feed da webcam
+      const miniFeed = document.createElement('div');
+      miniFeed.id = 'mini-feed';
+      const miniCanvas = document.createElement('canvas');
+      miniCanvas.id = 'mini-canvas';
+      miniFeed.appendChild(miniCanvas);
+      document.body.appendChild(miniFeed);
+
+      // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
+      handsfree.on('videoReady', () => {
+        const vid = document.querySelector('.handsfree-video');
+        if (vid && !miniFeed.contains(vid)) {
+          // Remove atributos width/height fixos para permitir responsividade
+          vid.removeAttribute('width');
+          vid.removeAttribute('height');
+          miniFeed.insertBefore(vid, miniCanvas);
+        }
+      });
  
      // 5. Botão para Habilitar/Desabilitar Handsfree
      const hacksPanel = document.querySelector('.bp-hacks-panel');
@@ -1224,11 +1240,22 @@ function showFailedFeedback() {
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
      const smoothingFactor = 0.3;
- 
-     function isInsideMatrix(x, y) {
-         if (!gridRect) return false;
-         return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
-     }
+
+      // === Função para desenhar landmarks no mini-canvas ===
+      function drawLandmarks(landmarks) {
+        const ctx = miniCanvas.getContext('2d');
+        const {width, height} = miniCanvas;
+        ctx.clearRect(0,0,width,height);
+        if (!landmarks) return;
+        ctx.fillStyle = '#00ffff';
+        landmarks.forEach(pt => {
+          const x = pt.x * width;
+          const y = pt.y * height;
+          ctx.beginPath();
+          ctx.arc(x, y, 3, 0, Math.PI*2);
+          ctx.fill();
+        });
+      }
  
      setTimeout(() => {
          const gridEl = document.getElementById('grid');
@@ -1273,8 +1300,12 @@ function showFailedFeedback() {
       // --- LÓGICA DO CURSOR (Usa a mão selecionada em "handToUse") ---
 
       if (!handToUse[0] || !handToUse[5] || !handToUse[9] || !handToUse[17]) {
+        drawLandmarks(null);
         return;
       }
+
+      // Desenha landmarks no mini-canvas
+      drawLandmarks(handToUse);
 
       // 1. Calcula o centro da palma
       const p0 = handToUse[0], p5 = handToUse[5], p9 = handToUse[9], p17 = handToUse[17];
