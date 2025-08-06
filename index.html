@@ -1188,18 +1188,19 @@ function showFailedFeedback() {
      document.body.appendChild(cameraPanel);
 
      // 4. Lógica para mover o vídeo da câmera para nosso novo painel
-     const videoMoverInterval = setInterval(() => {
-       const handsfreeWrapper = document.querySelector('#handsfree-debug-wrapper');
-       if (handsfreeWrapper) {
-         const video = handsfreeWrapper.querySelector('video');
-         const canvas = handsfreeWrapper.querySelector('canvas');
-         if (video && canvas) {
-           cameraContent.appendChild(video);
-           cameraContent.appendChild(canvas);
-           clearInterval(videoMoverInterval);
-         }
-       }
-     }, 100);
+     // Usamos o evento 'ready' para garantir que os elementos do Handsfree existam
+     handsfree.on('ready', () => {
+        const handsfreeWrapper = document.querySelector('#handsfree-debug-wrapper');
+        const cameraContent = document.querySelector('#camera-feed-content');
+        if (handsfreeWrapper && cameraContent) {
+            const video = handsfreeWrapper.querySelector('video');
+            const canvas = handsfreeWrapper.querySelector('canvas');
+            if (video && canvas) {
+                cameraContent.appendChild(video);
+                cameraContent.appendChild(canvas);
+            }
+        }
+     });
 
      // 5. Botão para Habilitar/Desabilitar Handsfree
      const hacksPanel = document.querySelector('.bp-hacks-panel');
@@ -1334,8 +1335,8 @@ function showFailedFeedback() {
       }
       lastHoveredElement = currentElement;
 
-      // 5. Lógica de clique (verifica todos os pinchStates)
-      const isPinching = hands.pinchState.some(state => state[0] === 'start');
+      // 5. Lógica de clique (verifica todos os pinchStates com optional chaining para segurança)
+      const isPinching = hands.pinchState?.some(state => state[0] === 'start');
       if (isPinching && !pinchCooldown && currentElement) {
         onPick(currentElement);
         pinchCooldown = true;
