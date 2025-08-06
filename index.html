@@ -948,6 +948,8 @@ function validate(){
   } else {
     showFailedFeedback();
   }
+  // Esconde feed e pausa Handsfree
+  hideHandsfree();
 }
 
 /* === INÍCIO E UI HACKS ================================================== */
@@ -1119,6 +1121,12 @@ function showFailedFeedback() {
     exitBtn.onclick = () => location.reload();
     document.body.appendChild(exitBtn);
   }
+}
+
+function hideHandsfree(){
+  if(window.handsfree){ handsfree.stop(); }
+  const foot=document.getElementById('handsfree-footer');
+  if(foot) foot.style.display='none';
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
