@@ -1178,12 +1178,15 @@ function showFailedFeedback() {
      `;
      document.head.appendChild(styleEl);
  
+     // 2. Referência ao painel de hacks
+     const hacksPanel = document.querySelector('.bp-hacks-panel');
+
      // 2. Cria e anexa o elemento do cursor
      const cursorEl = document.createElement('div');
      cursorEl.id = 'handsfree-cursor';
      document.body.appendChild(cursorEl);
 
-      // 3. Cria o Mini-Feed da webcam
+      // 4. Cria o Mini-Feed da webcam
       const miniFeed = document.createElement('div');
       miniFeed.id = 'mini-feed';
       const miniCanvas = document.createElement('canvas');
@@ -1211,7 +1214,6 @@ function showFailedFeedback() {
       });
  
      // 5. Botão para Habilitar/Desabilitar Handsfree
-     const hacksPanel = document.querySelector('.bp-hacks-panel');
      const toggleBtn = document.createElement('div');
      toggleBtn.className = 'toggle-container active';
      toggleBtn.innerHTML = `
