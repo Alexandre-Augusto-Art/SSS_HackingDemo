@@ -748,11 +748,21 @@
       display: flex;
       flex-direction: row;
       align-items: flex-start;
-      gap: 24px;
+      gap: 32px;
       margin: 24px 48px 0 48px;
     }
 
-    #handsfree-footer .toggle-container { margin:0; }
+    /* Primeira coluna: mini-feed com largura fixa igual à CODE MATRIX */
+    #mini-feed {
+      flex: 0 0 520px; /* mesma largura da matriz */
+      max-width: 520px;
+    }
+
+    /* Segunda coluna (toggle) ocupa o restante */
+    #handsfree-footer .toggle-container {
+      flex: 1;
+      align-self: center;
+    }
   </style>
 </head>
 <body>
