@@ -1109,7 +1109,7 @@ function showFailedFeedback() {
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: false})
-     handsfree.enablePlugins('browser'); // Reativado para obter `hands.pointer`
+     handsfree.enablePlugins('browser'); // Reativado para usar o `hands.pointer` estável
      handsfree.start()
  
      // --- Criação de Elementos da Interface (Cursor, Debug) ---
@@ -1187,48 +1187,7 @@ function showFailedFeedback() {
      let gridRect = null;
      let cellWidth = 0;
      let cellHeight = 0;
-
-     // Implementação do Filtro One Euro (Estrutura Corrigida)
-     function LowPassFilter(alpha, initval = 0.0) {
-         let y = initval;
-         return (x) => {
-             y += alpha * (x - y);
-             return y;
-         };
-     }
-
-     function OneEuroFilter(minCutoff, beta, dCutoff = 1.0) {
-         let x = LowPassFilter(1.0, 0.0);
-         let dx = LowPassFilter(1.0, 0.0);
-         let t_prev = -1;
-
-         return (v) => {
-             if (t_prev === -1) {
-                 t_prev = Date.now();
-                 return x(v);
-             }
-
-             const t = Date.now();
-             const te = t - t_prev;
-             t_prev = t;
-             
-             if (te === 0) return x(v); // Evita divisão por zero
-
-             const alpha_d = 1.0 / (1.0 + (2 * Math.PI * dCutoff * te) / 1000);
-             const dx_val = dx((v - x(v)) / te);
-             const fc = minCutoff + beta * Math.abs(dx_val);
-             const alpha = 1.0 / (1.0 + (2 * Math.PI * fc * te) / 1000);
-             
-             const filtered_v = LowPassFilter(alpha, v)(v);
-             x.y = filtered_v; // Atualiza o valor interno de x
-             return filtered_v;
-         };
-     }
-     
-     // Inicializa os filtros para X e Y
-     const filterX = OneEuroFilter(0.005, 100);
-     const filterY = OneEuroFilter(0.005, 100);
-
+ 
      function isInsideMatrix(x, y) {
          if (!gridRect) return false;
          return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
@@ -1246,66 +1205,49 @@ function showFailedFeedback() {
          }
      }, 500);
 
-     handsfree.use('minimalController', ({ hands }) => {
+     handsfree.use('finalController', ({ hands }) => {
        const cursorEl = document.getElementById('handsfree-cursor');
-       // console.log(hands); // Descomente esta linha para inspecionar os dados no console
 
-       if (hands?.landmarks?.[0]) {
-            // 1. Espelhamento dos Dados da Mão para Normalização
-            const mirroredLandmarks = hands.landmarks[0].map(p => ({ x: 1.0 - p.x, y: p.y, z: p.z }));
+       if (typeof hands?.pointer?.x === 'number') {
+           const x = window.innerWidth - hands.pointer.x; // Espelha a coordenada X do ponteiro nativo
+           const y = hands.pointer.y;
 
-            const landmarks = mirroredLandmarks;
+           cursorEl.style.left = `${x}px`;
+           cursorEl.style.top = `${y}px`;
+           cursorEl.style.display = 'block';
+           
+           const isVisible = isInsideMatrix(x, y);
+           cursorEl.style.display = isVisible ? 'block' : 'none';
 
-            if (landmarks && landmarks[0] && landmarks[5] && landmarks[9] && landmarks[17]) {
-                
-                const p0 = landmarks[0];
-                const p5 = landmarks[5];
-                const p9 = landmarks[9];
-                const p17 = landmarks[17];
-                const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
-                const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
-                const targetX = window.innerWidth * palmCenterX; // Inversão (1 - x) removida
-                const targetY = window.innerHeight * palmCenterY;
+           let currentElement = null;
+           if(isVisible) {
+               const relativeX = x - gridRect.left;
+               const relativeY = y - gridRect.top;
+               const col = Math.floor(relativeX / cellWidth);
+               const row = Math.floor(relativeY / cellHeight);
+               const gridEl = document.getElementById('grid');
+               if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+                   currentElement = gridEl.rows[row].cells[col];
+               }
+           }
 
-                // 2. Aplica suavização de movimento
-                const smoothedX = filterX(targetX);
-                const smoothedY = filterY(targetY);
+           if (lastHoveredElement && lastHoveredElement !== currentElement) {
+               lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
+           }
+           if (currentElement && currentElement !== lastHoveredElement) {
+               currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+           }
+           lastHoveredElement = currentElement;
 
-                cursorEl.style.left = `${smoothedX}px`;
-                cursorEl.style.top = `${smoothedY}px`;
-                cursorEl.style.display = 'block';
-                
-                const isVisible = isInsideMatrix(smoothedX, smoothedY);
-                let currentElement = null;
-                if(isVisible) {
-                    const relativeX = smoothedX - gridRect.left;
-                    const relativeY = smoothedY - gridRect.top;
-                    const col = Math.floor(relativeX / cellWidth);
-                    const row = Math.floor(relativeY / cellHeight);
-                    const gridEl = document.getElementById('grid');
-                    if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
-                        currentElement = gridEl.rows[row].cells[col];
-                    }
-                }
-
-                if (lastHoveredElement && lastHoveredElement !== currentElement) {
-                    lastHoveredElement.dispatchEvent(new MouseEvent('mouseleave', { bubbles: true }));
-                }
-                if (currentElement && currentElement !== lastHoveredElement) {
-                    currentElement.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-                }
-                lastHoveredElement = currentElement;
-
-                if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
-                    onPick(currentElement);
-                    pinchCooldown = true;
-                    setTimeout(() => { pinchCooldown = false; }, 750);
-                }
-            }
-        } else {
-            if (cursorEl) cursorEl.style.display = 'none';
-        }
-      });
+           if (hands.pinchState?.[0]?.[0] === 'start' && !pinchCooldown && currentElement) {
+               onPick(currentElement);
+               pinchCooldown = true;
+               setTimeout(() => { pinchCooldown = false; }, 750);
+           }
+       } else {
+           if (cursorEl) cursorEl.style.display = 'none';
+       }
+     });
  
      // Desativa plugins de scroll (se existirem)
      if(handsfree.plugin.pinchScroll) handsfree.plugin.pinchScroll.disable();
