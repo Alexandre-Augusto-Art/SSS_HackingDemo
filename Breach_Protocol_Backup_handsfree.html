@@ -755,12 +755,9 @@
     /* Mini-feed largura 266px (4:3 para 200px alt) */
     #mini-feed { flex: 0 0 266px; max-width:266px; }
 
-    /* Toggle ao lado, largura automática */
-    #handsfree-footer .toggle-container {
-      flex: 0 0 auto;
-      align-self: center;
-      margin-left: 32px;
-    }
+    /* Wrapper empilha toggle + gif verticalmente */
+   .toggle-gif-wrapper{display:flex;flex-direction:column;align-items:center;gap:6px;}
+   #gestureTutorial{width:150px;transform:scaleX(-1);filter:invert(1) sepia(1) saturate(10000%) hue-rotate(180deg) brightness(1.1);}
 
     /* Cantos retos para mini-feed, toggle e buffer boxes */
     #mini-feed,
@@ -800,7 +797,15 @@
     </div>
   </div>
   <!-- Handsfree Footer -->
-  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div><div class="toggle-container active"><div class="toggle-switch-visual"></div><span class="toggle-text">Handsfree ON</span></div></div>
+  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div>
+    <div class="toggle-gif-wrapper">
+      <div class="toggle-container active">
+        <div class="toggle-switch-visual"></div>
+        <span class="toggle-text">Handsfree ON</span>
+      </div>
+      <img id="gestureTutorial" src="Assets/click_tutorial.gif" alt="Hand click tutorial">
+    </div>
+  </div>
   <div id="winMsg" class="hide win">ACCESS&nbsp;GRANTED</div>
   <div id="failMsg" class="hide failbox">ACCESS&nbsp;DENIED</div>
 <script>
