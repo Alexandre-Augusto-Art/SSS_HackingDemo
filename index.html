@@ -1194,7 +1194,7 @@ function hideHandsfree(){
          left: 0;
           width: 100%;
           height: 100%;
-         object-fit: contain !important;   /* mostra o quadro completo  */
+          object-fit: cover !important;     /* preenche o box, sem barras */
          object-position: center center;   /* centraliza dentro do box */
          transform: scaleX(-1);
        }
@@ -1314,7 +1314,6 @@ function hideHandsfree(){
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
      const smoothingFactor = 0.3;
-     let hasHiddenMiniVideo = false;
 
     // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
     const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
@@ -1347,25 +1346,17 @@ function hideHandsfree(){
         const srcW = (vid && vid.videoWidth)  ? vid.videoWidth  : containerW;
         const srcH = (vid && vid.videoHeight) ? vid.videoHeight : containerH;
 
-        // Calcula a área desenhada do vídeo com object-fit: contain
+        // Calcula a área desenhada do vídeo com object-fit: cover
         // Ajusta para a borda: usa clientWidth/Height como referência
         const containerClientW = miniFeed.clientWidth;
         const containerClientH = miniFeed.clientHeight;
-        const scale = Math.min(containerClientW / srcW, containerClientH / srcH);
+        const scale = Math.max(containerClientW / srcW, containerClientH / srcH);
         const drawW = srcW * scale;
         const drawH = srcH * scale;
         const padX = (containerClientW - drawW) / 2;
         const padY = (containerClientH - drawH) / 2;
 
-        // Desenha o frame do vídeo dentro do canvas (em "contain")
-        if (vid && srcW && srcH) {
-          ctx.drawImage(vid, 0, 0, srcW, srcH, padX, padY, drawW, drawH);
-          if (!hasHiddenMiniVideo) {
-            // Esconde o elemento de vídeo, já que estamos renderizando no canvas
-            try { vid.style.display = 'none'; } catch (e) {}
-            hasHiddenMiniVideo = true;
-          }
-        }
+        // Mantemos o <video> visível sob o canvas; não desenhamos o frame no canvas
 
         ctx.fillStyle = '#00ffff';
         for (const pt of landmarks) {
