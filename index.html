@@ -1328,20 +1328,35 @@ function hideHandsfree(){
         cursorEl.style.transform = 'translate(-50%,-50%)';
       }
 
-      // === Função para desenhar landmarks no mini-canvas ===
+      // === Função para desenhar landmarks no mini-canvas (alinhado ao vídeo contain) ===
       function drawLandmarks(landmarks) {
         const ctx = miniCanvas.getContext('2d');
-        const {width, height} = miniCanvas;
-        ctx.clearRect(0,0,width,height);
+        const containerW = miniCanvas.width;
+        const containerH = miniCanvas.height;
+        ctx.clearRect(0, 0, containerW, containerH);
         if (!landmarks) return;
+
+        // Descobre o vídeo que está dentro do mini-feed
+        const vid = miniFeed.querySelector('video') || miniVideoFallback;
+        const srcW = (vid && vid.videoWidth)  ? vid.videoWidth  : containerW;
+        const srcH = (vid && vid.videoHeight) ? vid.videoHeight : containerH;
+
+        // Calcula a área desenhada do vídeo com object-fit: contain
+        const scale = Math.min(containerW / srcW, containerH / srcH);
+        const drawW = srcW * scale;
+        const drawH = srcH * scale;
+        const padX = (containerW - drawW) / 2;
+        const padY = (containerH - drawH) / 2;
+
         ctx.fillStyle = '#00ffff';
-        landmarks.forEach(pt => {
-          const x = pt.x * width;
-          const y = pt.y * height;
+        for (const pt of landmarks) {
+          // pt.x/pt.y em [0,1] no espaço do frame; mapeia para a área visível
+          const x = padX + pt.x * drawW;
+          const y = padY + pt.y * drawH;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI*2);
+          ctx.arc(x, y, 3, 0, Math.PI * 2);
           ctx.fill();
-        });
+        }
       }
 
       // Utilitário para verificar se o cursor está dentro da área da matriz
