@@ -1302,10 +1302,6 @@ function hideHandsfree(){
       return Math.max(min, Math.min(max, v));
     }
 
-    // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---
-    // Ajuste conforme posicionamento da matriz na tela
-    const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 };
-
 
 
       // Variáveis para clique sustentado
@@ -1398,11 +1394,9 @@ function hideHandsfree(){
       const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
       const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
-      // 2. Mapeia posição da palma dentro da janela ROI e normaliza (0-1)
-      let normX = (palmCenterX - ROI.xMin) / (ROI.xMax - ROI.xMin);
-      normX = clamp(normX);
-      let normY = (palmCenterY - ROI.yMin) / (ROI.yMax - ROI.yMin);
-      normY = clamp(normY);
+      // 2. Mapeia posição da palma para a tela (considerando espelhamento do vídeo)
+      let normX = clamp(palmCenterX);
+      let normY = clamp(palmCenterY);
 
       // Converte para coordenadas dentro do Code Matrix
       const targetX = gridRect.left + normX * gridRect.width;
