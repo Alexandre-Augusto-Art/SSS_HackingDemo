@@ -1205,8 +1205,10 @@ function hideHandsfree(){
          height: 100%;
          object-fit: contain !important;   /* mostra o quadro completo  */
          object-position: center center;   /* centraliza dentro do box */
-         transform: scaleX(-1);
        }
+       /* Reflete apenas o canvas (landmarks), não o vídeo */
+       #mini-feed canvas { transform: scaleX(-1); }
+       #mini-feed video  { transform: none; }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
        .handsfree-debugger,
        .handsfree-debugger video,
