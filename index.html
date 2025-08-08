@@ -1393,7 +1393,7 @@ function hideHandsfree(){
       const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
       // 2. Mapeia posição da palma para a tela (considerando espelhamento do vídeo)
-      let normX = clamp(1.0 - palmCenterX);
+      let normX = clamp(palmCenterX);
       let normY = clamp(palmCenterY);
 
       // Converte para coordenadas dentro do Code Matrix
