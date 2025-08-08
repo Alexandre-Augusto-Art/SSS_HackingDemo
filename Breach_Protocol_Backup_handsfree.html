@@ -1146,7 +1146,16 @@ function hideHandsfree(){
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
+     const handsfree = new Handsfree({
+        showDebug: true,
+        useGestures: true,
+        hands: {
+          enabled: true,
+          maxNumHands: 2,      // Detecta até 2 mãos
+          selfieMode: true,    // Espelha (match ao vídeo)
+          modelType: 'lite'    // Mais rápido; pode trocar para 'full' se precisar
+        }
+      })
      handsfree.enablePlugins('browser');
      handsfree.start()
  
@@ -1196,8 +1205,10 @@ function hideHandsfree(){
          height: 100%;
          object-fit: contain !important;   /* mostra o quadro completo  */
          object-position: center center;   /* centraliza dentro do box */
-         transform: scaleX(-1);
        }
+       /* Reflete apenas o canvas (landmarks), não o vídeo */
+       #mini-feed canvas { transform: none; }
+       #mini-feed video  { transform: none; }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
        .handsfree-debugger,
        .handsfree-debugger video,
@@ -1286,11 +1297,14 @@ function hideHandsfree(){
      let lastCursorPos = { x: 0, y: 0 };
     const smoothingFactor = 0.3;
 
-    // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
-    const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
+    // --- Utilitário clamp ---
     function clamp(v, min = 0, max = 1) {
       return Math.max(min, Math.min(max, v));
     }
+
+    // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---
+    // Ajuste conforme posicionamento da matriz na tela
+    const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 };
 
 
 
@@ -1304,19 +1318,22 @@ function hideHandsfree(){
         cursorEl.style.transform = 'translate(-50%,-50%)';
       }
 
-      // === Função para desenhar landmarks no mini-canvas ===
-      function drawLandmarks(landmarks) {
+      // === Função para desenhar landmarks de múltiplas mãos ===
+      function drawLandmarksMulti(allLandmarks) {
         const ctx = miniCanvas.getContext('2d');
         const {width, height} = miniCanvas;
         ctx.clearRect(0,0,width,height);
-        if (!landmarks) return;
+        if (!allLandmarks || allLandmarks.length === 0) return;
         ctx.fillStyle = '#00ffff';
-        landmarks.forEach(pt => {
-          const x = pt.x * width;
-          const y = pt.y * height;
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI*2);
-          ctx.fill();
+        allLandmarks.forEach(lms=>{
+          if (!lms) return;
+          lms.forEach(pt=>{
+            const x = pt.x * width;
+            const y = pt.y * height;
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI*2);
+            ctx.fill();
+          });
         });
       }
 
@@ -1373,22 +1390,19 @@ function hideHandsfree(){
         return;
       }
 
-      // Desenha landmarks no mini-canvas
-      drawLandmarks(handToUse);
+      // Desenha landmarks de todas as mãos detectadas
+      drawLandmarksMulti(hands.landmarks);
 
       // 1. Calcula o centro da palma
       const p0 = handToUse[0], p5 = handToUse[5], p9 = handToUse[9], p17 = handToUse[17];
       const palmCenterX = (p0.x + p5.x + p9.x + p17.x) / 4;
       const palmCenterY = (p0.y + p5.y + p9.y + p17.y) / 4;
 
-      // 2. Mapeia posição da palma para ROI central e depois para gridRect
+      // 2. Mapeia posição da palma dentro da janela ROI e normaliza (0-1)
       let normX = (palmCenterX - ROI.xMin) / (ROI.xMax - ROI.xMin);
       normX = clamp(normX);
       let normY = (palmCenterY - ROI.yMin) / (ROI.yMax - ROI.yMin);
       normY = clamp(normY);
-
-      // Inverte eixo X se não for mão direita
-      if (handLabel !== 'Mão Direita') normX = 1 - normX;
 
       // Converte para coordenadas dentro do Code Matrix
       const targetX = gridRect.left + normX * gridRect.width;
