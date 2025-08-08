@@ -1146,7 +1146,16 @@ function hideHandsfree(){
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
-     const handsfree = new Handsfree({hands: true, useGestures: true, showDebug: true})
+     const handsfree = new Handsfree({
+        showDebug: true,
+        useGestures: true,
+        hands: {
+          enabled: true,
+          maxNumHands: 2,      // Detecta até 2 mãos
+          selfieMode: true,    // Espelha (match ao vídeo)
+          modelType: 'lite'    // Mais rápido; pode trocar para 'full' se precisar
+        }
+      })
      handsfree.enablePlugins('browser');
      handsfree.start()
  
