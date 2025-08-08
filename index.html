@@ -797,7 +797,7 @@
     </div>
   </div>
   <!-- Handsfree Footer -->
-  <div id="handsfree-footer"><div id="mini-feed"><video id="mini-video" playsinline muted autoplay></video><canvas id="fx-canvas"></canvas><canvas id="mini-canvas"></canvas></div>
+  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div>
     <div class="toggle-gif-wrapper">
       <div class="toggle-container active">
         <div class="toggle-switch-visual"></div>
@@ -1142,7 +1142,7 @@ function hideHandsfree(){
 }
 </script>
 <!-- Handsfree.js – Hand-tracking cursor integration -->
-<script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>\n<script src="https://unpkg.com/twgl.js/dist/4.x/twgl-full.min.js"></script>
+<script src="https://unpkg.com/handsfree@8.5.1/build/lib/handsfree.js"></script>
 <script>
   window.addEventListener('DOMContentLoaded', () => {
      // showDebug: true agora irá mostrar a câmera e os pontos de referência
@@ -1192,18 +1192,12 @@ function hideHandsfree(){
          position: absolute;
          top: 0;
          left: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover !important;     /* preenche o box, sem barras */
+         width: 100%;
+         height: 100%;
+         object-fit: contain !important;   /* mostra o quadro completo  */
          object-position: center center;   /* centraliza dentro do box */
          transform: scaleX(-1);
        }
-       /* Garante que o elemento de vídeo herde o box-size interno (sem bordas) */
-       #mini-feed { box-sizing: border-box; }
-       #mini-feed video { box-sizing: border-box; }
-        #mini-feed video { z-index: 1; }
-        #mini-feed canvas { z-index: 2; pointer-events: none; background: transparent; }
-        #mini-feed #mini-canvas { z-index: 3; }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
        .handsfree-debugger,
        .handsfree-debugger video,
@@ -1231,21 +1225,6 @@ function hideHandsfree(){
      // Referências aos elementos já existentes do footer
      const miniFeed = document.getElementById('mini-feed');
      const miniCanvas = document.getElementById('mini-canvas');
-     const fxCanvas = document.getElementById('fx-canvas');
-     const miniVideoFallback = document.getElementById('mini-video');
-
-     function sizeMiniCanvasToContainer(){
-       if(!miniFeed || !miniCanvas) return;
-       // Usa clientWidth/clientHeight para ignorar a borda do container,
-       // evitando que o canvas fique alguns pixels maior que o vídeo.
-       const cw = miniFeed.clientWidth;
-       const ch = miniFeed.clientHeight;
-       miniCanvas.width = Math.max(1, Math.floor(cw));
-       miniCanvas.height = Math.max(1, Math.floor(ch));
-       if (fxCanvas) { fxCanvas.width = miniCanvas.width; fxCanvas.height = miniCanvas.height; }
-     }
-     sizeMiniCanvasToContainer();
-     window.addEventListener('resize', sizeMiniCanvasToContainer);
      const footer = document.getElementById('handsfree-footer');
 
      // 3. Cria e anexa o elemento do cursor
@@ -1255,8 +1234,8 @@ function hideHandsfree(){
  
      // 4. Cria o Mini-Feed da webcam
      // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
-     function tryAttachHandsfreeVideo(){
-       let vid = handsfree.debug?.$video || document.querySelector('.handsfree-video') || document.querySelector('.handsfree-debugger video');
+     handsfree.on('ready', () => {
+       const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
        if (vid && !miniFeed.contains(vid)) {
          // Remove atributos width/height fixos para permitir responsividade
          vid.removeAttribute('width');
@@ -1268,22 +1247,10 @@ function hideHandsfree(){
          vid.style.left = '0';
          vid.style.width = '100%';
          vid.style.height = '100%';
-         vid.style.objectFit = 'cover';
-          vid.id = 'handsfreeVideo';
-          miniFeed.insertBefore(vid, miniCanvas);
-         return true;
+         vid.style.objectFit = 'contain';
+         miniFeed.insertBefore(vid, miniCanvas);
        }
-       return !!(vid && miniFeed.contains(vid));
-     }
-     handsfree.on('ready', tryAttachHandsfreeVideo);
-     handsfree.on('start', tryAttachHandsfreeVideo);
-     // Tentativa repetida por alguns segundos caso o evento não traga o <video>
-     let attachTries = 0;
-     const attachInterval = setInterval(() => {
-       if (tryAttachHandsfreeVideo() || attachTries++ > 40) {
-         clearInterval(attachInterval);
-       }
-     }, 100);
+     });
  
      // 5. Botão para Habilitar/Desabilitar Handsfree
      const toggleBtn = document.querySelector('#handsfree-footer .toggle-container');
@@ -1317,7 +1284,7 @@ function hideHandsfree(){
      let cellWidth = 0;
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
-     const smoothingFactor = 0.3;
+    const smoothingFactor = 0.3;
 
     // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
     const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
@@ -1337,40 +1304,20 @@ function hideHandsfree(){
         cursorEl.style.transform = 'translate(-50%,-50%)';
       }
 
-      // === Função para desenhar landmarks no mini-canvas (alinhado ao vídeo, modo cover) ===
+      // === Função para desenhar landmarks no mini-canvas ===
       function drawLandmarks(landmarks) {
         const ctx = miniCanvas.getContext('2d');
-        const containerW = miniCanvas.width;
-        const containerH = miniCanvas.height;
-        ctx.clearRect(0, 0, containerW, containerH);
+        const {width, height} = miniCanvas;
+        ctx.clearRect(0,0,width,height);
         if (!landmarks) return;
-
-        // Descobre o vídeo que está dentro do mini-feed
-        const vid = miniFeed.querySelector('video') || miniVideoFallback;
-        const srcW = (vid && vid.videoWidth)  ? vid.videoWidth  : containerW;
-        const srcH = (vid && vid.videoHeight) ? vid.videoHeight : containerH;
-
-        // Calcula a área desenhada do vídeo com object-fit: cover
-        // Ajusta para a borda: usa clientWidth/Height como referência
-        const containerClientW = miniFeed.clientWidth;
-        const containerClientH = miniFeed.clientHeight;
-        const scale = Math.max(containerClientW / srcW, containerClientH / srcH);
-        const drawW = srcW * scale;
-        const drawH = srcH * scale;
-        const padX = (containerClientW - drawW) / 2;
-        const padY = (containerClientH - drawH) / 2;
-
-        // Mantemos o <video> visível sob o canvas; não desenhamos o frame no canvas
-
         ctx.fillStyle = '#00ffff';
-        for (const pt of landmarks) {
-          // pt.x/pt.y em [0,1] no espaço do frame; mapeia para a área visível
-          const x = padX + pt.x * drawW;
-          const y = padY + pt.y * drawH;
+        landmarks.forEach(pt => {
+          const x = pt.x * width;
+          const y = pt.y * height;
           ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI * 2);
+          ctx.arc(x, y, 3, 0, Math.PI*2);
           ctx.fill();
-        }
+        });
       }
 
       // Utilitário para verificar se o cursor está dentro da área da matriz
@@ -1379,19 +1326,17 @@ function hideHandsfree(){
         return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
       }
  
-     function computeGridMetrics(){
-       const gridEl = document.getElementById('grid');
-       if (!gridEl) return false;
-       gridRect = gridEl.getBoundingClientRect();
-       if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
-         const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
-         cellWidth = cellRect.width;
-         cellHeight = cellRect.height;
-       }
-       return !!(gridRect && gridRect.width && gridRect.height && cellWidth && cellHeight);
-     }
-     // Primeira tentativa tardia para quando o layout já estiver pronto
-     setTimeout(computeGridMetrics, 500);
+     setTimeout(() => {
+         const gridEl = document.getElementById('grid');
+         if (gridEl) {
+             gridRect = gridEl.getBoundingClientRect();
+             if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
+                 const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
+                 cellWidth = cellRect.width;
+                 cellHeight = cellRect.height;
+             }
+         }
+     }, 500);
 
     handsfree.use('minimalController', ({ hands }) => {
       const cursorEl = document.getElementById('handsfree-cursor');
@@ -1445,14 +1390,6 @@ function hideHandsfree(){
       // Inverte eixo X se não for mão direita
       if (handLabel !== 'Mão Direita') normX = 1 - normX;
 
-      // Garante métricas do grid; se ainda não disponíveis, tenta novamente e sai
-      if (!gridRect || !gridRect.width || !gridRect.height || !cellWidth || !cellHeight) {
-        if (!computeGridMetrics()) {
-          cursorEl.style.display = 'none';
-          return;
-        }
-      }
-
       // Converte para coordenadas dentro do Code Matrix
       const targetX = gridRect.left + normX * gridRect.width;
       const targetY = gridRect.top  + normY * gridRect.height;
@@ -1475,7 +1412,7 @@ function hideHandsfree(){
         const col = Math.floor(relativeX / cellWidth);
         const row = Math.floor(relativeY / cellHeight);
         const gridEl = document.getElementById('grid');
-        if (gridEl && gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
           currentElement = gridEl.rows[row].cells[col];
         }
       }
@@ -1523,14 +1460,6 @@ function hideHandsfree(){
       console.error(err)
     })
   })
-</script>
-<script>
-window.addEventListener('DOMContentLoaded',()=>{
-  const fxCanvas=document.getElementById('fx-canvas');
-  const video=(function(){const v=document.querySelector('#mini-feed video');return v||document.getElementById('mini-video');})();
-  if(!fxCanvas||!window.twgl) return; let vidRef=null;function initOnce(){const vids=document.querySelectorAll('#mini-feed video');let cam=null;vids.forEach(el=>{if(el.readyState>=2 && el.videoWidth>0){cam=el;}});if(!cam) return false;vidRef=cam;vidRef.style.display='none';startGL();return true;}function startGL(){const gl=fxCanvas.getContext('webgl',{premultipliedAlpha:false});if(!gl) return;const vs=`attribute vec2 a_position;varying vec2 v_uv;void main(){v_uv=a_position*0.5+0.5;gl_Position=vec4(a_position,0.0,1.0);}`;const fs=`precision mediump float;uniform sampler2D u_tex;uniform vec2 u_resolution;uniform float u_time;varying vec2 v_uv;float rand(vec2 co){return fract(sin(dot(co.xy,vec2(12.9898,78.233)))*43758.5453);}void main(){vec2 uv=v_uv;float px=1.0/u_resolution.x;vec3 cr=texture2D(u_tex,uv+vec2(px*2.0,0.0)).rgb;vec3 cg=texture2D(u_tex,uv).rgb;vec3 cb=texture2D(u_tex,uv-vec2(px*2.0,0.0)).rgb;vec3 col=vec3(cr.r,cg.g,cb.b);float levels=6.0;col=floor(col*levels)/levels;float stripe=step(0.5,fract(uv.y*300.0));col*=mix(0.75,1.0,stripe);float noise=(rand(uv*u_time)*0.04);col+=noise;gl_FragColor=vec4(col,1.0);} `;const programInfo=twgl.createProgramInfo(gl,[vs,fs]);const bufferInfo=twgl.primitives.createXYQuadBufferInfo(gl);const tex=twgl.createTexture(gl,{ src:vidRef,crossOrigin:"",minMag:gl.LINEAR,wrap:gl.CLAMP_TO_EDGE});function render(time){twgl.updateTextureFromElement(gl,tex,vidRef);twgl.resizeCanvasToDisplaySize(gl.canvas);gl.viewport(0,0,gl.canvas.width,gl.canvas.height);gl.useProgram(programInfo.program);twgl.setBuffersAndAttributes(gl,programInfo,bufferInfo);twgl.setUniforms(programInfo,{u_tex:tex,u_resolution:[gl.canvas.width,gl.canvas.height],u_time:time*0.001});twgl.drawBufferInfo(gl,bufferInfo);requestAnimationFrame(render);}requestAnimationFrame(render);}if(!initOnce()){const iv=setInterval(()=>{if(initOnce()) clearInterval(iv);},200);}
-
-});
 </script>
 </body>
 </html>
