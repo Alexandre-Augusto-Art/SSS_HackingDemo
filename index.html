@@ -1312,19 +1312,22 @@ function hideHandsfree(){
         cursorEl.style.transform = 'translate(-50%,-50%)';
       }
 
-      // === Função para desenhar landmarks no mini-canvas ===
-      function drawLandmarks(landmarks) {
+      // === Função para desenhar landmarks de múltiplas mãos ===
+      function drawLandmarksMulti(allLandmarks) {
         const ctx = miniCanvas.getContext('2d');
         const {width, height} = miniCanvas;
         ctx.clearRect(0,0,width,height);
-        if (!landmarks) return;
+        if (!allLandmarks || allLandmarks.length === 0) return;
         ctx.fillStyle = '#00ffff';
-        landmarks.forEach(pt => {
-          const x = pt.x * width;
-          const y = pt.y * height;
-          ctx.beginPath();
-          ctx.arc(x, y, 3, 0, Math.PI*2);
-          ctx.fill();
+        allLandmarks.forEach(lms=>{
+          if (!lms) return;
+          lms.forEach(pt=>{
+            const x = pt.x * width;
+            const y = pt.y * height;
+            ctx.beginPath();
+            ctx.arc(x, y, 3, 0, Math.PI*2);
+            ctx.fill();
+          });
         });
       }
 
@@ -1381,8 +1384,8 @@ function hideHandsfree(){
         return;
       }
 
-      // Desenha landmarks no mini-canvas
-      drawLandmarks(handToUse);
+      // Desenha landmarks de todas as mãos detectadas
+      drawLandmarksMulti(hands.landmarks);
 
       // 1. Calcula o centro da palma
       const p0 = handToUse[0], p5 = handToUse[5], p9 = handToUse[9], p17 = handToUse[17];
