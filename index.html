@@ -797,7 +797,7 @@
     </div>
   </div>
   <!-- Handsfree Footer -->
-  <div id="handsfree-footer"><div id="mini-feed"><canvas id="mini-canvas"></canvas></div>
+  <div id="handsfree-footer"><div id="mini-feed"><video id="mini-video" playsinline muted autoplay></video><canvas id="mini-canvas"></canvas></div>
     <div class="toggle-gif-wrapper">
       <div class="toggle-container active">
         <div class="toggle-switch-visual"></div>
@@ -1198,6 +1198,8 @@ function hideHandsfree(){
          object-position: center center;   /* centraliza dentro do box */
          transform: scaleX(-1);
        }
+       #mini-feed video { z-index: 1; }
+       #mini-feed canvas { z-index: 2; pointer-events: none; background: transparent; }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
        .handsfree-debugger,
        .handsfree-debugger video,
@@ -1225,6 +1227,17 @@ function hideHandsfree(){
      // Referências aos elementos já existentes do footer
      const miniFeed = document.getElementById('mini-feed');
      const miniCanvas = document.getElementById('mini-canvas');
+     const miniVideoFallback = document.getElementById('mini-video');
+
+     function sizeMiniCanvasToContainer(){
+       if(!miniFeed || !miniCanvas) return;
+       const rect = miniFeed.getBoundingClientRect();
+       // Ajusta o tamanho interno do canvas para evitar blur
+       miniCanvas.width = Math.max(1, Math.floor(rect.width));
+       miniCanvas.height = Math.max(1, Math.floor(rect.height));
+     }
+     sizeMiniCanvasToContainer();
+     window.addEventListener('resize', sizeMiniCanvasToContainer);
      const footer = document.getElementById('handsfree-footer');
 
      // 3. Cria e anexa o elemento do cursor
@@ -1234,8 +1247,8 @@ function hideHandsfree(){
  
      // 4. Cria o Mini-Feed da webcam
      // Quando o Handsfree iniciar e criar o <video>, movemos para o mini-feed
-     handsfree.on('ready', () => {
-       const vid = handsfree.debug?.$video || document.querySelector('.handsfree-video');
+     function tryAttachHandsfreeVideo(){
+       let vid = handsfree.debug?.$video || document.querySelector('.handsfree-video') || document.querySelector('.handsfree-debugger video');
        if (vid && !miniFeed.contains(vid)) {
          // Remove atributos width/height fixos para permitir responsividade
          vid.removeAttribute('width');
@@ -1249,8 +1262,19 @@ function hideHandsfree(){
          vid.style.height = '100%';
          vid.style.objectFit = 'contain';
          miniFeed.insertBefore(vid, miniCanvas);
+         return true;
        }
-     });
+       return !!(vid && miniFeed.contains(vid));
+     }
+     handsfree.on('ready', tryAttachHandsfreeVideo);
+     handsfree.on('start', tryAttachHandsfreeVideo);
+     // Tentativa repetida por alguns segundos caso o evento não traga o <video>
+     let attachTries = 0;
+     const attachInterval = setInterval(() => {
+       if (tryAttachHandsfreeVideo() || attachTries++ > 40) {
+         clearInterval(attachInterval);
+       }
+     }, 100);
  
      // 5. Botão para Habilitar/Desabilitar Handsfree
      const toggleBtn = document.querySelector('#handsfree-footer .toggle-container');
