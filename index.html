@@ -1196,8 +1196,10 @@ function hideHandsfree(){
           height: 100%;
           object-fit: cover !important;     /* preenche o box, sem barras */
          object-position: center center;   /* centraliza dentro do box */
-         transform: scaleX(-1);
        }
+       /* Espelha somente o vídeo; o canvas mantém coordenadas não espelhadas */
+       #mini-feed video { transform: scaleX(-1); }
+       #mini-feed canvas { transform: none; }
        /* Garante que o elemento de vídeo herde o box-size interno (sem bordas) */
        #mini-feed { box-sizing: border-box; }
        #mini-feed video { box-sizing: border-box; }
@@ -1361,7 +1363,9 @@ function hideHandsfree(){
         ctx.fillStyle = '#00ffff';
         for (const pt of landmarks) {
           // pt.x/pt.y em [0,1] no espaço do frame; mapeia para a área visível
-          const x = padX + pt.x * drawW;
+          // O vídeo está espelhado (scaleX(-1)), então espelhamos o X dos pontos
+          const mirroredX = 1 - pt.x;
+          const x = padX + mirroredX * drawW;
           const y = padY + pt.y * drawH;
           ctx.beginPath();
           ctx.arc(x, y, 3, 0, Math.PI * 2);
