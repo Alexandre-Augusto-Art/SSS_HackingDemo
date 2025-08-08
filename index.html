@@ -1384,17 +1384,19 @@ function hideHandsfree(){
         return x >= gridRect.left && x <= gridRect.right && y >= gridRect.top && y <= gridRect.bottom;
       }
  
-     setTimeout(() => {
-         const gridEl = document.getElementById('grid');
-         if (gridEl) {
-             gridRect = gridEl.getBoundingClientRect();
-             if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
-                 const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
-                 cellWidth = cellRect.width;
-                 cellHeight = cellRect.height;
-             }
-         }
-     }, 500);
+     function computeGridMetrics(){
+       const gridEl = document.getElementById('grid');
+       if (!gridEl) return false;
+       gridRect = gridEl.getBoundingClientRect();
+       if (gridEl.rows.length > 0 && gridEl.rows[0].cells.length > 0) {
+         const cellRect = gridEl.rows[0].cells[0].getBoundingClientRect();
+         cellWidth = cellRect.width;
+         cellHeight = cellRect.height;
+       }
+       return !!(gridRect && gridRect.width && gridRect.height && cellWidth && cellHeight);
+     }
+     // Primeira tentativa tardia para quando o layout já estiver pronto
+     setTimeout(computeGridMetrics, 500);
 
     handsfree.use('minimalController', ({ hands }) => {
       const cursorEl = document.getElementById('handsfree-cursor');
@@ -1448,6 +1450,14 @@ function hideHandsfree(){
       // Inverte eixo X se não for mão direita
       if (handLabel !== 'Mão Direita') normX = 1 - normX;
 
+      // Garante métricas do grid; se ainda não disponíveis, tenta novamente e sai
+      if (!gridRect || !gridRect.width || !gridRect.height || !cellWidth || !cellHeight) {
+        if (!computeGridMetrics()) {
+          cursorEl.style.display = 'none';
+          return;
+        }
+      }
+
       // Converte para coordenadas dentro do Code Matrix
       const targetX = gridRect.left + normX * gridRect.width;
       const targetY = gridRect.top  + normY * gridRect.height;
@@ -1470,7 +1480,7 @@ function hideHandsfree(){
         const col = Math.floor(relativeX / cellWidth);
         const row = Math.floor(relativeY / cellHeight);
         const gridEl = document.getElementById('grid');
-        if (gridEl.rows[row] && gridEl.rows[row].cells[col]) {
+        if (gridEl && gridEl.rows[row] && gridEl.rows[row].cells[col]) {
           currentElement = gridEl.rows[row].cells[col];
         }
       }
