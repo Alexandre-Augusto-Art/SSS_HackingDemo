@@ -1192,12 +1192,15 @@ function hideHandsfree(){
          position: absolute;
          top: 0;
          left: 0;
-         width: 100%;
-         height: 100%;
+          width: 100%;
+          height: 100%;
          object-fit: contain !important;   /* mostra o quadro completo  */
          object-position: center center;   /* centraliza dentro do box */
          transform: scaleX(-1);
        }
+       /* Garante que o elemento de vídeo herde o box-size interno (sem bordas) */
+       #mini-feed { box-sizing: border-box; }
+       #mini-feed video { box-sizing: border-box; }
        #mini-feed video { z-index: 1; }
        #mini-feed canvas { z-index: 2; pointer-events: none; background: transparent; }
        /* Ajusta qualquer saída Handsfree para no máximo 200px de altura */
@@ -1231,10 +1234,12 @@ function hideHandsfree(){
 
      function sizeMiniCanvasToContainer(){
        if(!miniFeed || !miniCanvas) return;
-       const rect = miniFeed.getBoundingClientRect();
-       // Ajusta o tamanho interno do canvas para evitar blur
-       miniCanvas.width = Math.max(1, Math.floor(rect.width));
-       miniCanvas.height = Math.max(1, Math.floor(rect.height));
+       // Usa clientWidth/clientHeight para ignorar a borda do container,
+       // evitando que o canvas fique alguns pixels maior que o vídeo.
+       const cw = miniFeed.clientWidth;
+       const ch = miniFeed.clientHeight;
+       miniCanvas.width = Math.max(1, Math.floor(cw));
+       miniCanvas.height = Math.max(1, Math.floor(ch));
      }
      sizeMiniCanvasToContainer();
      window.addEventListener('resize', sizeMiniCanvasToContainer);
@@ -1308,7 +1313,8 @@ function hideHandsfree(){
      let cellWidth = 0;
      let cellHeight = 0;
      let lastCursorPos = { x: 0, y: 0 };
-    const smoothingFactor = 0.3;
+     const smoothingFactor = 0.3;
+     let hasHiddenMiniVideo = false;
 
     // --- ROI para mapeamento da câmera ao Code Matrix (ajustado) ---------
     const ROI = { xMin: 0.55, xMax: 0.79, yMin: 0.40, yMax: 0.72 }; // ROI reduzido, mais estreito e deslocado para baixo
@@ -1342,11 +1348,24 @@ function hideHandsfree(){
         const srcH = (vid && vid.videoHeight) ? vid.videoHeight : containerH;
 
         // Calcula a área desenhada do vídeo com object-fit: contain
-        const scale = Math.min(containerW / srcW, containerH / srcH);
+        // Ajusta para a borda: usa clientWidth/Height como referência
+        const containerClientW = miniFeed.clientWidth;
+        const containerClientH = miniFeed.clientHeight;
+        const scale = Math.min(containerClientW / srcW, containerClientH / srcH);
         const drawW = srcW * scale;
         const drawH = srcH * scale;
-        const padX = (containerW - drawW) / 2;
-        const padY = (containerH - drawH) / 2;
+        const padX = (containerClientW - drawW) / 2;
+        const padY = (containerClientH - drawH) / 2;
+
+        // Desenha o frame do vídeo dentro do canvas (em "contain")
+        if (vid && srcW && srcH) {
+          ctx.drawImage(vid, 0, 0, srcW, srcH, padX, padY, drawW, drawH);
+          if (!hasHiddenMiniVideo) {
+            // Esconde o elemento de vídeo, já que estamos renderizando no canvas
+            try { vid.style.display = 'none'; } catch (e) {}
+            hasHiddenMiniVideo = true;
+          }
+        }
 
         ctx.fillStyle = '#00ffff';
         for (const pt of landmarks) {
